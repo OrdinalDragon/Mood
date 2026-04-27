@@ -1,0 +1,77 @@
+# docker-compose.yml for MOOD project
+version: '3.8'
+
+services:
+  db:
+    image: mariadb:10.11
+    container_name: mood_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: mood_db
+      MYSQL_USER: mood_user
+      MYSQL_PASSWORD: mood_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    networks:
+      - mood_network
+
+  backend:
+    image: mood---explor-tu-ciudad-backend
+    container_name: mood_backend
+    restart: always
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USER: mood_user
+      DB_PASSWORD: mood_password
+      DB_NAME: mood_db
+    depends_on:
+      - db
+    networks:
+      - mood_network
+
+  frontend:
+    image: mood---explor-tu-ciudad-frontend
+    container_name: mood_frontend
+    restart: always
+    expose:
+      - "80"
+    networks:
+      - mood_network
+
+  nginx:
+    image: nginx:alpine
+    container_name: mood_nginx
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - mood_network
+
+  cloudflare:
+    image: cloudflare/cloudflared:latest
+    container_name: mood_tunnel
+    restart: always
+    environment:
+      - TUNNEL_TOKEN=eyJhIjoiN2Q4YzU5YmVlM2VhNDZhNTQ4YmZlZjRkMTI4MDZlZmQiLCJ0IjoiMGFhYzQ2NjAtODRkNS00YWI5LWIyMTktN2YxMDRmODkzNGUwIiwicyI6Ik9Ua3haR1UwWW1VdE1tWXpaaTAwWkdJMkxXRTFNbVV0TWpobVl6STFNV1JoTlRVMiJ9
+    command: tunnel run
+    networks:
+      - mood_network
+    depends_on:
+      - nginx
+
+volumes:
+  mariadb_data:
+    driver: local
+
+networks:
+  mood_network:
+    driver: bridge
