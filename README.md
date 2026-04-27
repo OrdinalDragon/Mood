@@ -111,8 +111,8 @@ Planned improvements:
 
 ## Author
 
+**Mood team (group of 9)**
 **Nicolas Schernetzki**
-- GitHub: [@OrdinalDragon](https://github.com/OrdinalDragon)
 
 ---
 
