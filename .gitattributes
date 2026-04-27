@@ -1,0 +1,7 @@
+
+app/** linguist-language=Python
+
+
+*.ts linguist-language=TypeScript
+*.tsx linguist-language=TypeScript
+*.css linguist-language=CSS
