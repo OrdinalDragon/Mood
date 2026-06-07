@@ -2,57 +2,61 @@
 <img width="1200" height="475" alt="MOOD Banner" src="./src/img/mood_logo.jpg" />
 </div>
 
+<p align="center">
+  <a href="./README.en.md">🇺🇸 English</a>
+</p>
+
 # Mood App 🎭
 
-> **Prototype — Work in Progress**
+> **Prototipo — Trabajo en Progreso**
 
-A full-stack web application that recommends nearby events based on how you're feeling. Tell the app your current mood, and it surfaces local events that match your vibe.
+Aplicación web full-stack que recomienda eventos cercanos según cómo te sentís. Decile a la app tu estado de ánimo actual y ella te muestra eventos locales que combinan con tu vibe.
 
-🌐 **Live demo:** [prototipomood.jesrepresentaciones.com.ar](https://prototipomood.jesrepresentaciones.com.ar)
-
----
-
-## Features
-
-- 🔐 User registration and login with JWT
-- 😊 Mood selection to reflect how you're feeling
-- 📍 Nearby event recommendations based on your current mood
-- 🌗 Dark mode with system preference detection
-- 🗺️ Interactive map with city and province search (OpenStreetMap)
-- 📝 Community event submission with admin approval workflow
-- 🗄️ Persistent user data with MariaDB
-- 📱 Responsive design (mobile, tablet, desktop)
+🌐 **Demo en vivo:** [prototipomood.jesrepresentaciones.com.ar](https://prototipomood.jesrepresentaciones.com.ar)
 
 ---
 
-## Tech Stack
+## Funcionalidades
 
-| Layer | Technology |
-|-------|-----------|
+- 🔐 Registro e inicio de sesión con JWT
+- 😊 Selección de estado de ánimo para reflejar cómo te sentís
+- 📍 Recomendaciones de eventos cercanos según tu estado de ánimo
+- 🌗 Modo oscuro con detección de preferencia del sistema
+- 🗺️ Mapa interactivo con búsqueda por ciudad y provincia (OpenStreetMap)
+- 📝 Subida de eventos por la comunidad con flujo de aprobación por administradores
+- 🗄️ Datos persistentes con MariaDB
+- 📱 Diseño responsive (mobile, tablet, desktop)
+
+---
+
+## Tecnologías
+
+| Capa | Tecnología |
+|------|------------|
 | **Front-End** | React 19, TypeScript, Tailwind CSS v4, shadcn UI, Vite, React Router, React Leaflet, date-fns, Lucide React |
 | **Back-End** | FastAPI (Python 3.9+), SQLAlchemy, PyJWT |
-| **Database** | MariaDB |
-| **Containerization** | Docker & Docker Compose |
+| **Base de datos** | MariaDB |
+| **Contenedores** | Docker & Docker Compose |
 | **Proxy** | Nginx |
 | **Tunnel** | Cloudflare Tunnel |
 | **Geocoding** | Nominatim (OpenStreetMap) |
 
 ---
 
-## Getting Started
+## Cómo empezar
 
 ### Info
 
-There may be missing files because of private info and API keys.
+Puede que falten archivos por información privada y API keys.
 
-### Prerequisites
+### Requisitos
 
 - Python 3.9+
 - Node.js 18+
-- Docker & Docker Compose (recommended)
-- MariaDB (if not using Docker)
+- Docker & Docker Compose (recomendado)
+- MariaDB (si no usás Docker)
 
-### Quick Start (Docker)
+### Inicio rápido (Docker)
 
 ```bash
 git clone https://github.com/MoodGrupo6/Prototipo-mood.git
@@ -61,56 +65,56 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-### Manual Installation
+### Instalación manual
 
-1. **Clone the repository**
+1. **Clonar el repositorio**
    ```bash
    git clone https://github.com/MoodGrupo6/Prototipo-mood.git
    cd Prototipo-mood
    ```
 
-2. **Set up environment variables**
+2. **Configurar variables de entorno**
    ```bash
    cp .env.example .env
-   # Edit .env with your DB credentials and any API keys
+   # Editar .env con tus credenciales de DB y API keys
    ```
 
-3. **Install back-end dependencies**
+3. **Instalar dependencias del back-end**
    ```bash
    pip install -r requirements.txt
    ```
 
-4. **Install front-end dependencies**
+4. **Instalar dependencias del front-end**
    ```bash
    npm install
    ```
 
-5. **Run database migrations**
+5. **Ejecutar migraciones de base de datos**
    ```bash
-   # Ensure MariaDB is running and credentials match .env
+   # Asegurate de que MariaDB esté corriendo y las credenciales coincidan con .env
    ```
 
-6. **Run the app**
+6. **Ejecutar la app**
    ```bash
-   # Start the back-end
+   # Iniciar el back-end
    uvicorn app.main:app --reload
 
-   # In a separate terminal, start the front-end
+   # En otra terminal, iniciar el front-end
    npm run dev
    ```
 
-7. Open your browser at `http://localhost:5173`
+7. Abrir el navegador en `http://localhost:5173`
 
 ---
 
-## Project Status
+## Estado del proyecto
 
-This project is currently a **prototype**. Features are being actively developed and improved.
+Este proyecto es actualmente un **prototipo**. Las funcionalidades están siendo desarrolladas y mejoradas activamente.
 
-Planned improvements:
-- [ ] Geolocation integration for automatic nearby detection
-- [ ] Expanded mood categories
-- [ ] Mobile-responsive polish
+Mejoras planificadas:
+- [ ] Integración de geolocalización para detección automática de cercanía
+- [ ] Categorías de ánimo expandidas
+- [ ] Mejoras de responsive mobile
 
 ---
 
@@ -129,6 +133,6 @@ Planned improvements:
 
 ---
 
-## License
+## Licencia
 
-This project is proprietary. All rights reserved. You may view the code for reference purposes, but you may not copy, modify, or distribute it without explicit permission.
+Este proyecto es privado. Todos los derechos reservados. Podés ver el código como referencia, pero no podés copiarlo, modificarlo ni distribuirlo sin permiso explícito.
