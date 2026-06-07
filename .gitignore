@@ -10,4 +10,4 @@ firebase-blueprint.json
 .github/
 backend/
 *.sql
-src/lib/
+# src/lib/ is intentionally NOT ignored - contains core source code
