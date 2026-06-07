@@ -2,6 +2,10 @@
 <img width="1200" height="475" alt="MOOD Banner" src="./src/img/mood_logo.jpg" />
 </div>
 
+<p align="center">
+  <a href="#english"><b>🇺🇸 English version ↓</b></a>
+</p>
+
 # Mood App 🎭
 
 > **Prototipo — Trabajo en Progreso**
@@ -136,6 +140,8 @@ Este proyecto es privado. Todos los derechos reservados. Podés ver el código c
 ---
 
 ---
+
+<span id="english"></span>
 
 # Mood App 🎭
 
