@@ -27,7 +27,7 @@ def list_events(
     weekend: Optional[str] = None,
     lat: Optional[float] = None,
     lng: Optional[float] = None,
-    radius_km: Optional[float] = 25
+    radius_km: Optional[float] = 50
 ):
     """Lista eventos con filtros opcionales."""
     query = db.query(Event)

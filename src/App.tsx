@@ -298,7 +298,7 @@ function MapPage() {
         else if (filter === 'weekend') url += '&weekend=true';
         else if (filter === 'free') url += '&is_free=true';
         else if (filter === 'outdoor') url += '&is_outdoor=true';
-        if (latParam && lngParam) url += `&lat=${latParam}&lng=${lngParam}&radius_km=25`;
+        if (latParam && lngParam) url += `&lat=${latParam}&lng=${lngParam}&radius_km=50`;
         if (contextMood) url += `&mood=${encodeURIComponent(contextMood)}`;
         
         const response = await fetch(url);
