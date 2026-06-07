@@ -30,6 +30,7 @@ class EventCreate(BaseModel):
     moods: Optional[list[str]] = None
     cover_image: Optional[str] = None
     images: Optional[list[str]] = None
+    image_url: Optional[str] = None
     is_free: Optional[bool] = False
     is_outdoor: Optional[bool] = False
 
@@ -42,6 +43,7 @@ class EventUpdate(BaseModel):
     moods: Optional[list[str]] = None
     cover_image: Optional[str] = None
     images: Optional[list[str]] = None
+    image_url: Optional[str] = None
     is_free: Optional[bool] = False
     is_outdoor: Optional[bool] = False
 
@@ -55,6 +57,7 @@ class EventResponse(BaseModel):
     moods: Optional[list[str]] = None
     cover_image: Optional[str] = None
     images: Optional[list[str]] = None
+    image_url: Optional[str] = None
     is_free: Optional[bool] = False
     is_outdoor: Optional[bool] = False
     status: str
@@ -69,6 +72,7 @@ class EventListResponse(BaseModel):
     category: Optional[list] = None
     moods: Optional[list[str]] = None
     cover_image: Optional[str] = None
+    image_url: Optional[str] = None
     is_free: Optional[bool] = False
     is_outdoor: Optional[bool] = False
     distance: Optional[float] = None

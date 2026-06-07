@@ -134,6 +134,7 @@ def list_events(
             'id': e.id, 'title': e.title, 'date': e.date,
             'location': e.location, 'category': e.category,
             'moods': e.moods, 'cover_image': e.cover_image,
+            'image_url': e.image_url,
             'is_free': e.is_free, 'is_outdoor': e.is_outdoor,
             'status': e.status.value if e.status else 'pending',
         }
@@ -201,6 +202,7 @@ def create_event(event_create: EventCreate, db: Session = Depends(get_db)):
         moods=event_create.moods,
         cover_image=event_create.cover_image,
         images=event_create.images,
+        image_url=event_create.image_url,
         is_free=event_create.is_free,
         is_outdoor=event_create.is_outdoor,
         status=EventStatus.pending,
@@ -275,6 +277,8 @@ def update_event(
         event.cover_image = update_data['cover_image']
     if 'images' in update_data:
         event.images = update_data['images']
+    if 'image_url' in update_data:
+        event.image_url = update_data['image_url']
     if 'is_free' in update_data:
         event.is_free = update_data['is_free']
     if 'is_outdoor' in update_data:

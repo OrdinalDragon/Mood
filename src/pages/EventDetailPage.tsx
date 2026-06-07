@@ -345,6 +345,7 @@ const [selectedImage, setSelectedImage] = useState('');
                           is_outdoor: event.is_outdoor,
                           cover_image: event.cover_image || '',
                           images: event.images || [],
+                          image_url: event.image_url || '',
                           location: event.location,
                         });
                         setEditOpen(true);
@@ -529,6 +530,34 @@ const [selectedImage, setSelectedImage] = useState('');
                   }} />
                 </label>
               </div>
+            </div>
+
+            {/* Thumbnail */}
+            <div>
+              <Label className="text-base font-semibold mb-2 block">Miniatura (se ve en cards)</Label>
+              {(editForm.image_url as string) ? (
+                <div className="relative w-32 h-20 rounded-lg overflow-hidden border">
+                  <img src={editForm.image_url as string} alt="Miniatura" className="w-full h-full object-cover" />
+                  <button type="button" onClick={() => setEditForm(p => ({ ...p, image_url: '' }))} className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-0.5 hover:bg-black transition">
+                    <X size={12} />
+                  </button>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center w-32 h-20 border-2 border-dashed rounded-lg cursor-pointer border-slate-300 bg-slate-50 hover:border-primary/60 hover:bg-primary/5 transition">
+                  <Upload size={20} className="text-slate-400 mb-1" />
+                  <span className="text-[10px] text-slate-500">Subir</span>
+                  <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={async e => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    try {
+                      const result = await uploadImage(file);
+                      setEditForm(p => ({ ...p, image_url: result.url }));
+                      toast.success('Miniatura subida');
+                    } catch { toast.error('Error al subir'); }
+                    e.target.value = '';
+                  }} />
+                </label>
+              )}
             </div>
 
             <div>

@@ -81,7 +81,13 @@ const getCategoryColor = (cat: string): string => {
       <Card className="h-full cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden group">
         {/* Imagen del evento */}
         <div className="h-40 bg-slate-200 relative overflow-hidden">
-          {event.cover_image ? (
+          {event.image_url ? (
+            <img
+              src={event.image_url}
+              alt={event.title}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+          ) : event.cover_image ? (
             <img
               src={event.cover_image}
               alt={event.title}
