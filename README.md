@@ -2,47 +2,117 @@
 <img width="1200" height="475" alt="MOOD Banner" src="./src/img/mood_logo.jpg" />
 </div>
 
-# MOOD
+# Mood App 🎭
 
-Plataforma web para descubrir y compartir eventos según tu estado de ánimo. Explorá tu ciudad, conectá con experiencias locales y encontrá el plan perfecto para cada momento.
+> **Prototype — Work in Progress**
 
-## Tecnologías
+A full-stack web application that recommends nearby events based on how you're feeling. Tell the app your current mood, and it surfaces local events that match your vibe.
 
-### Frontend
-- **React 19** — UI components
-- **TypeScript** — type safety
-- **Tailwind CSS v4** — utility-first styling
-- **shadcn UI** — component library
-- **Vite** — build tool
-- **React Router** — client-side routing
-- **React Leaflet** — mapas interactivos (OpenStreetMap)
-- **date-fns** — formateo de fechas
-- **Lucide React** — iconos
+🌐 **Live demo:** [prototipomood.jesrepresentaciones.com.ar](https://prototipomood.jesrepresentaciones.com.ar)
 
-### Backend
-- **Python 3.9+**
-- **FastAPI** — REST API
-- **SQLAlchemy** — ORM
-- **MariaDB** — base de datos
-- **PyJWT** — autenticación JWT
+---
 
-### Infraestructura
-- **Docker & Docker Compose** — contenedores
-- **Nginx** — reverse proxy
-- **Cloudflare Tunnel** — exposición segura a internet
+## Features
 
-### APIs externas
-- **Nominatim (OpenStreetMap)** — geocoding de ciudades y provincias argentinas
+- 🔐 User registration and login with JWT
+- 😊 Mood selection to reflect how you're feeling
+- 📍 Nearby event recommendations based on your current mood
+- 🌗 Dark mode with system preference detection
+- 🗺️ Interactive map with city and province search (OpenStreetMap)
+- 📝 Community event submission with admin approval workflow
+- 🗄️ Persistent user data with MariaDB
+- 📱 Responsive design (mobile, tablet, desktop)
 
-## Puntos fuertes
+---
 
-- 🌗 **Modo oscuro** — toggle con persistencia en localStorage, respeta la preferencia del sistema
-- 🗺️ **Mapa interactivo** — buscá eventos por ciudad o provincia con geocoding vía OpenStreetMap
-- 🎭 **Filtro por estado de ánimo** — seleccioná tu mood y descubrí eventos recomendados para vos
-- 📝 **Subida de eventos** — la comunidad puede compartir eventos, con revisión por administradores
-- 🔐 **Autenticación JWT** — registro, login y persistencia de sesión
-- 📱 **Diseño responsive** — adaptado a mobile, tablet y desktop
-- 🐳 **Deploy con Docker** — un solo comando para levantar todo el stack
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| **Front-End** | React 19, TypeScript, Tailwind CSS v4, shadcn UI, Vite, React Router, React Leaflet, date-fns, Lucide React |
+| **Back-End** | FastAPI (Python 3.9+), SQLAlchemy, PyJWT |
+| **Database** | MariaDB |
+| **Containerization** | Docker & Docker Compose |
+| **Proxy** | Nginx |
+| **Tunnel** | Cloudflare Tunnel |
+| **Geocoding** | Nominatim (OpenStreetMap) |
+
+---
+
+## Getting Started
+
+### Info
+
+There may be missing files because of private info and API keys.
+
+### Prerequisites
+
+- Python 3.9+
+- Node.js 18+
+- Docker & Docker Compose (recommended)
+- MariaDB (if not using Docker)
+
+### Quick Start (Docker)
+
+```bash
+git clone https://github.com/MoodGrupo6/Prototipo-mood.git
+cd Prototipo-mood
+cp .env.example .env
+docker compose up -d --build
+```
+
+### Manual Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/MoodGrupo6/Prototipo-mood.git
+   cd Prototipo-mood
+   ```
+
+2. **Set up environment variables**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your DB credentials and any API keys
+   ```
+
+3. **Install back-end dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Install front-end dependencies**
+   ```bash
+   npm install
+   ```
+
+5. **Run database migrations**
+   ```bash
+   # Ensure MariaDB is running and credentials match .env
+   ```
+
+6. **Run the app**
+   ```bash
+   # Start the back-end
+   uvicorn app.main:app --reload
+
+   # In a separate terminal, start the front-end
+   npm run dev
+   ```
+
+7. Open your browser at `http://localhost:5173`
+
+---
+
+## Project Status
+
+This project is currently a **prototype**. Features are being actively developed and improved.
+
+Planned improvements:
+- [ ] Geolocation integration for automatic nearby detection
+- [ ] Expanded mood categories
+- [ ] Mobile-responsive polish
+
+---
 
 ## Integrantes
 
@@ -56,3 +126,9 @@ Plataforma web para descubrir y compartir eventos según tu estado de ánimo. Ex
 - Luciano Bustamante
 - Diego Ruda
 - Leonardo Nieto
+
+---
+
+## License
+
+This project is proprietary. All rights reserved. You may view the code for reference purposes, but you may not copy, modify, or distribute it without explicit permission.
