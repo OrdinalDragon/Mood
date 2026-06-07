@@ -1,11 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Event } from '../types';
-import { getEvent } from '../lib/api';
+import { getEvent, updateEvent } from '../lib/api';
 import { categoryLabels, sampleEvents } from '../lib/sampleEvents';
+import { useAuth } from '../hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { 
   ArrowLeft, 
   Calendar, 
@@ -14,10 +20,12 @@ import {
   User, 
   Share2, 
   Heart,
-  Navigation
+  Navigation,
+  Pencil
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { toast } from 'sonner';
 
 // Helper para parsear fecha de cualquier formato
 const parseEventDate = (date: any): Date | null => {
@@ -34,10 +42,13 @@ const parseEventDate = (date: any): Date | null => {
 export const EventDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [attending, setAttending] = useState(false);
   const [attendeeCount, setAttendeeCount] = useState(0);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState<Partial<Event>>({});
 
   useEffect(() => {
     if (!id) {
@@ -292,6 +303,29 @@ export const EventDetailPage: React.FC = () => {
                       Guardar
                     </Button>
                   </div>
+                  {isAdmin && (
+                    <Button 
+                      variant="outline" 
+                      className="w-full border-blue-200 text-blue-600 hover:bg-blue-50"
+                      onClick={() => {
+                        setEditForm({
+                          title: event.title,
+                          description: event.description,
+                          date: event.date,
+                          category: event.category,
+                          moods: event.moods,
+                          is_free: event.is_free,
+                          is_outdoor: event.is_outdoor,
+                          cover_image: event.cover_image || '',
+                          location: event.location,
+                        });
+                        setEditOpen(true);
+                      }}
+                    >
+                      <Pencil size={16} className="mr-1" />
+                      Editar evento
+                    </Button>
+                  )}
                 </div>
 
                 <div className="border-t pt-4 space-y-3 text-sm">
@@ -319,6 +353,117 @@ export const EventDetailPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Edit dialog for admins */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar Evento</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Título</Label>
+              <Input value={editForm.title || ''} onChange={e => setEditForm(p => ({ ...p, title: e.target.value }))} />
+            </div>
+            <div>
+              <Label>Descripción</Label>
+              <Textarea value={editForm.description || ''} onChange={e => setEditForm(p => ({ ...p, description: e.target.value }))} rows={3} />
+            </div>
+            <div>
+              <Label>Fecha</Label>
+              <Input type="datetime-local" value={editForm.date ? new Date(editForm.date as string).toISOString().slice(0, 16) : ''} onChange={e => setEditForm(p => ({ ...p, date: new Date(e.target.value).toISOString() }))} />
+            </div>
+            <div>
+              <Label>Categoría</Label>
+              <Select value={Array.isArray(editForm.category) ? editForm.category[0] : editForm.category || 'cultural'} onValueChange={v => setEditForm(p => ({ ...p, category: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cultural">Cultural</SelectItem>
+                  <SelectItem value="adventure">Aventura</SelectItem>
+                  <SelectItem value="relax">Relajación</SelectItem>
+                  <SelectItem value="nightlife">Vida Nocturna</SelectItem>
+                  <SelectItem value="group">Grupal</SelectItem>
+                  <SelectItem value="solo">Individual</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {/* Moods */}
+            <div>
+              <Label>Estados de ánimo</Label>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {['alegre','triste','energetico','reservado','romantico','estresado'].map(mId => {
+                  const labels: Record<string,string> = { alegre:'😊 Alegre', triste:'😢 Triste', energetico:'⚡ Enérgico', reservado:'😐 Reservado', romantico:'💕 Romántico', estresado:'😫 Estresado' };
+                  const selected = ((editForm.moods as string[]) || []).includes(mId);
+                  return (
+                    <button key={mId} type="button" onClick={() => setEditForm(p => {
+                      const cur = (p.moods as string[]) || [];
+                      return { ...p, moods: cur.includes(mId) ? cur.filter(m => m !== mId) : [...cur, mId] };
+                    })} className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${selected ? 'bg-primary text-primary-foreground border-primary' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-primary'}`}>{labels[mId]}</button>
+                  );
+                })}
+              </div>
+            </div>
+            {/* Location */}
+            <div className="border-t pt-4">
+              <Label className="text-base font-semibold mb-2 block">Ubicación</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2">
+                  <Label>Dirección</Label>
+                  <Input value={(editForm.location as any)?.address || ''} onChange={e => setEditForm(p => ({ ...p, location: { ...(p.location as any || {}), address: e.target.value } }))} />
+                </div>
+                <div>
+                  <Label>Ciudad</Label>
+                  <Input value={(editForm.location as any)?.city || ''} onChange={e => setEditForm(p => ({ ...p, location: { ...(p.location as any || {}), city: e.target.value } }))} />
+                </div>
+                <div>
+                  <Label>Provincia</Label>
+                  <Input value={(editForm.location as any)?.province || ''} onChange={e => setEditForm(p => ({ ...p, location: { ...(p.location as any || {}), province: e.target.value } }))} />
+                </div>
+                <div>
+                  <Label>Latitud</Label>
+                  <Input type="number" step="any" value={(editForm.location as any)?.lat ?? ''} onChange={e => setEditForm(p => ({ ...p, location: { ...(p.location as any || {}), lat: parseFloat(e.target.value) || 0 } }))} />
+                </div>
+                <div>
+                  <Label>Longitud</Label>
+                  <Input type="number" step="any" value={(editForm.location as any)?.lng ?? ''} onChange={e => setEditForm(p => ({ ...p, location: { ...(p.location as any || {}), lng: parseFloat(e.target.value) || 0 } }))} />
+                </div>
+              </div>
+            </div>
+            <div>
+              <Label>Gratuito</Label>
+              <Select value={editForm.is_free ? 'true' : 'false'} onValueChange={v => setEditForm(p => ({ ...p, is_free: v === 'true' }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="true">Sí</SelectItem>
+                  <SelectItem value="false">No</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Al aire libre</Label>
+              <Select value={editForm.is_outdoor ? 'true' : 'false'} onValueChange={v => setEditForm(p => ({ ...p, is_outdoor: v === 'true' }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="true">Sí</SelectItem>
+                  <SelectItem value="false">No</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-3 justify-end pt-4 border-t">
+              <Button variant="outline" onClick={() => setEditOpen(false)}>Cancelar</Button>
+              <Button onClick={async () => {
+                if (!event) return;
+                try {
+                  const updated = await updateEvent(event.id, editForm);
+                  setEvent(updated);
+                  toast.success("Evento actualizado");
+                  setEditOpen(false);
+                } catch { toast.error("Error al actualizar"); }
+              }} className="bg-primary text-white">Guardar Cambios</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

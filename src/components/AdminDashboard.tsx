@@ -140,6 +140,7 @@ export const AdminDashboard: React.FC = () => {
       is_free: event.is_free,
       is_outdoor: event.is_outdoor,
       cover_image: event.cover_image || '',
+      location: event.location,
     });
     setDialogOpen(true);
   };
@@ -149,6 +150,20 @@ export const AdminDashboard: React.FC = () => {
    */
   const handleEditField = (field: string, value: any) => {
     setEditForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleLocationField = (field: string, value: any) => {
+    setEditForm(prev => ({ ...prev, location: { ...(prev.location as any || {}), [field]: value } }));
+  };
+
+  const toggleMood = (moodId: string) => {
+    setEditForm(prev => {
+      const current = (prev.moods as string[]) || [];
+      const next = current.includes(moodId)
+        ? current.filter(m => m !== moodId)
+        : [...current, moodId];
+      return { ...prev, moods: next };
+    });
   };
 
   /**
@@ -355,6 +370,79 @@ export const AdminDashboard: React.FC = () => {
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Estados de ánimo */}
+              <div>
+                <Label>Estados de ánimo</Label>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {['alegre','triste','energetico','reservado','romantico','estresado'].map(mId => {
+                    const labels: Record<string,string> = {
+                      alegre: '😊 Alegre', triste: '😢 Triste', energetico: '⚡ Enérgico',
+                      reservado: '😐 Reservado', romantico: '💕 Romántico', estresado: '😫 Estresado'
+                    };
+                    const selected = ((editForm.moods as string[]) || []).includes(mId);
+                    return (
+                      <button
+                        key={mId}
+                        type="button"
+                        onClick={() => toggleMood(mId)}
+                        className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                          selected
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-primary'
+                        }`}
+                      >
+                        {labels[mId]}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Ubicación */}
+              <div className="border-t pt-4">
+                <Label className="text-base font-semibold mb-2 block">Ubicación</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="col-span-2">
+                    <Label>Dirección</Label>
+                    <Input 
+                      value={(editForm.location as any)?.address || ''} 
+                      onChange={e => handleLocationField('address', e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label>Ciudad</Label>
+                    <Input 
+                      value={(editForm.location as any)?.city || ''} 
+                      onChange={e => handleLocationField('city', e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label>Provincia</Label>
+                    <Input 
+                      value={(editForm.location as any)?.province || ''} 
+                      onChange={e => handleLocationField('province', e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label>Latitud</Label>
+                    <Input 
+                      type="number" step="any"
+                      value={(editForm.location as any)?.lat ?? ''} 
+                      onChange={e => handleLocationField('lat', parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
+                  <div>
+                    <Label>Longitud</Label>
+                    <Input 
+                      type="number" step="any"
+                      value={(editForm.location as any)?.lng ?? ''} 
+                      onChange={e => handleLocationField('lng', parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <Label>Gratuito</Label>
                 <Select 

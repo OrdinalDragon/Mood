@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Event, EventStatus, User
 from app.schemas import EventCreate, EventUpdate, EventResponse, EventListResponse
+from app.routes.auth import get_current_user
 from datetime import datetime, timedelta
 
 router = APIRouter(prefix="/events", tags=["Events"])
@@ -243,8 +244,15 @@ def delete_event(event_id: str, db: Session = Depends(get_db)):
     db.commit()
 
 @router.put("/{event_id}", response_model=EventResponse)
-def update_event(event_id: str, event_update: EventUpdate, db: Session = Depends(get_db)):
-    """Actualiza un evento existente."""
+def update_event(
+    event_id: str,
+    event_update: EventUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Actualiza un evento existente. Solo admins."""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Solo admins pueden editar eventos")
     event = db.query(Event).filter(Event.id == event_id).first()
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
