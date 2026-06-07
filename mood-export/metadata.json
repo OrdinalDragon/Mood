@@ -1,0 +1,12 @@
+{
+  "name": "MOOD - Explorá tu ciudad",
+  "description": "Plataforma colaborativa para descubrir eventos y lugares en Argentina según tu estado de ánimo. Incluye mapa interactivo, calendario y sistema de aprobación de eventos.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "firebase",
+    "maps",
+    "realtime"
+  ]
+}

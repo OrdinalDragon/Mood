@@ -1,0 +1,21 @@
+🚀 Pasos en la otra PC
+1. Instalar Docker Desktop
+https://www.docker.com/products/docker-desktop/
+
+2. Copiar la carpeta mood-export
+USB, red, cloud, etc.
+
+3. Abrir terminal en la carpeta y ejecutar
+# Crear .env
+copy .env.example .env
+
+# Levantar todo (build + start)
+docker-compose up -d --build
+
+# Importar base de datos (550 eventos)
+docker exec -i mood_db mysql -uroot -p"<DB_PASSWORD>" mood_db < mood_db_backup.sql
+4. Abrir en el navegador
+Frontend: http://localhost
+Backend API: http://localhost:8000
+Swagger Docs: http://localhost:8000/docs
+La carpeta pesa aproximadamente 4.5 MB (sin contar node_modules).

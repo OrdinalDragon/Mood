@@ -1,0 +1,159 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId} (matches auth.uid)
+    // Fields:
+    //   - uid: string (required)
+    //   - email: string (required, format: email)
+    //   - displayName: string (optional)
+    //   - photoURL: string (optional)
+    //   - role: string (required, enum: ['admin', 'user'])
+    //   - favorites: array of strings (optional, event IDs)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: events
+    // Document ID: {eventId}
+    // Fields:
+    //   - title: string (required, size < 100)
+    //   - description: string (required, size < 2000)
+    //   - date: timestamp (required)
+    //   - endDate: timestamp (optional)
+    //   - location: map (required)
+    //     - address: string
+    //     - city: string
+    //     - province: string
+    //     - lat: number
+    //     - lng: number
+    //   - category: string (required, enum: ['cultural', 'adventure', 'relax', 'nightlife', 'group', 'solo'])
+    //   - status: string (required, enum: ['pending', 'approved', 'rejected'])
+    //   - createdBy: string (required, matches author uid)
+    //   - authorName: string (required)
+    //   - isRecurring: bool (required)
+    //   - recurrenceRule: string (optional)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: notifications
+    // Document ID: {notifId}
+    // Fields:
+    //   - userId: string (required)
+    //   - title: string (required)
+    //   - message: string (required)
+    //   - read: bool (required)
+    //   - createdAt: timestamp (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "schernetzki96@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function areImmutableFieldsUnchanged(fields) {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return hasOnlyAllowedFields(['uid', 'email', 'displayName', 'photoURL', 'role', 'favorites', 'createdAt']) &&
+             data.uid == request.auth.uid &&
+             isValidEmail(data.email) &&
+             data.role in ['admin', 'user'] &&
+             (data.favorites is list || !('favorites' in data)) &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidEvent(data) {
+      return hasOnlyAllowedFields(['title', 'description', 'date', 'endDate', 'location', 'category', 'status', 'createdBy', 'authorName', 'isRecurring', 'recurrenceRule', 'createdAt']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 100 &&
+             data.description is string && data.description.size() < 2000 &&
+             data.date is timestamp &&
+             data.location is map &&
+             data.category in ['cultural', 'adventure', 'relax', 'nightlife', 'group', 'solo'] &&
+             data.status in ['pending', 'approved', 'rejected'] &&
+             data.createdBy == request.auth.uid &&
+             data.authorName is string && data.authorName.size() < 100 &&
+             data.isRecurring is bool &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidNotification(data) {
+      return hasOnlyAllowedFields(['userId', 'title', 'message', 'read', 'createdAt']) &&
+             data.userId is string &&
+             data.title is string && data.title.size() < 200 &&
+             data.message is string && data.message.size() < 1000 &&
+             data.read is bool &&
+             data.createdAt is timestamp;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && 
+                    ((isOwner(userId) && request.resource.data.role == 'user') || isAdmin());
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && 
+                    ((isOwner(userId) && request.resource.data.role == resource.data.role && areImmutableFieldsUnchanged(['createdAt', 'uid'])) || isAdmin());
+    }
+
+    match /events/{eventId} {
+      // Public read if approved
+      allow read: if resource.data.status == 'approved' || (isAuthenticated() && (resource.data.createdBy == request.auth.uid || isAdmin()));
+      
+      allow create: if isAuthenticated() && isValidEvent(request.resource.data) && 
+                    request.resource.data.status == 'pending';
+      
+      allow update: if isAuthenticated() && (
+        // Admin can update status and everything
+        isAdmin() || 
+        // Owner can update but status stays pending or unchanged if already pending
+        (resource.data.createdBy == request.auth.uid && 
+         isValidEvent(request.resource.data) && 
+         (request.resource.data.status == 'pending' || request.resource.data.status == resource.data.status) &&
+         areImmutableFieldsUnchanged(['createdAt', 'createdBy']))
+      );
+      
+      allow delete: if isAdmin() || (isAuthenticated() && resource.data.createdBy == request.auth.uid);
+    }
+
+    match /notifications/{notifId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAdmin(); // Only system/admin can create notifications
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid && 
+                    hasOnlyAllowedFields(['userId', 'title', 'message', 'read', 'createdAt']) &&
+                    areImmutableFieldsUnchanged(['userId', 'title', 'message', 'createdAt']);
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+  }
+}

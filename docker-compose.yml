@@ -1,0 +1,140 @@
+# ============================================================
+# docker-compose.yml - MOOD Project
+# ============================================================
+# Servicios:
+#   - db: MariaDB (base de datos)
+#   - backend: FastAPI (API REST)
+#   - frontend: React + Nginx (app web)
+#   - nginx: Reverse proxy
+#   - cloudflare: Tunnel para exponer a internet
+#
+# Uso:
+#   docker-compose up -d --build
+#
+# URLs:
+#   - Frontend: http://localhost
+#   - Backend API: http://localhost:8000
+#   - Swagger Docs: http://localhost:8000/docs
+
+version: '3.8'
+
+services:
+  # ============================================================
+  # MARIADB - Base de datos
+  # ============================================================
+  db:
+    image: mariadb:10.11
+    container_name: mood_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-mood_db}
+      MYSQL_USER: ${MYSQL_USER:-mood_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-mood_password}
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - mood_network
+
+  # ============================================================
+  # BACKEND - FastAPI
+  # ============================================================
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mood_backend
+    restart: always
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USER: ${MYSQL_USER:-mood_user}
+      DB_PASSWORD: ${MYSQL_PASSWORD:-mood_password}
+      DB_NAME: ${MYSQL_DATABASE:-mood_db}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/app/app:ro  # Montar código para desarrollo
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    networks:
+      - mood_network
+
+  # ============================================================
+  # FRONTEND - React + Nginx
+  # ============================================================
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: mood_frontend
+    restart: always
+    environment:
+      VITE_API_URL: /api
+    expose:
+      - "80"
+    networks:
+      - mood_network
+
+  # ============================================================
+  # NGINX - Reverse Proxy
+  # ============================================================
+  nginx:
+    image: nginx:alpine
+    container_name: mood_nginx
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      frontend:
+        condition: service_started
+      backend:
+        condition: service_healthy
+    networks:
+      - mood_network
+
+  # ============================================================
+  # CLOUDFLARE TUNNEL - Exponer a internet
+  # ============================================================
+  cloudflare:
+    image: cloudflare/cloudflared:latest
+    container_name: mood_tunnel
+    restart: always
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    command: tunnel run
+    networks:
+      - mood_network
+    depends_on:
+      - nginx
+
+# ============================================================
+# VOLÚMENES - Datos persistentes
+# ============================================================
+volumes:
+  mariadb_data:
+    driver: local
+
+# ============================================================
+# REDES - Comunicación entre contenedores
+# ============================================================
+networks:
+  mood_network:
+    driver: bridge
