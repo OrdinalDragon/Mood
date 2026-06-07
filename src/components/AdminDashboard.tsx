@@ -14,7 +14,7 @@
 import React, { useEffect, useState } from 'react';
 
 // API
-import { getPendingEvents, approveEvent, rejectEvent, deleteEvent, updateEvent } from '../lib/api';
+import { getPendingEvents, approveEvent, rejectEvent, deleteEvent, updateEvent, uploadImage } from '../lib/api';
 
 // Tipos
 import { Event } from '../types';
@@ -30,7 +30,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 
 // Iconos
-import { Check, X, Trash2, ExternalLink, Pencil } from 'lucide-react';
+import { Check, X, Trash2, ExternalLink, Pencil, MapPin, Upload, ImagePlus } from 'lucide-react';
 
 // Utils
 import { format } from 'date-fns';
@@ -135,11 +135,12 @@ export const AdminDashboard: React.FC = () => {
       title: event.title,
       description: event.description,
       date: event.date,
-      category: event.category,
+      category: Array.isArray(event.category) ? event.category[0] : event.category,
       moods: event.moods,
       is_free: event.is_free,
       is_outdoor: event.is_outdoor,
       cover_image: event.cover_image || '',
+      images: event.images || [],
       location: event.location,
     });
     setDialogOpen(true);
@@ -440,6 +441,80 @@ export const AdminDashboard: React.FC = () => {
                       onChange={e => handleLocationField('lng', parseFloat(e.target.value) || 0)}
                     />
                   </div>
+                </div>
+                <Button type="button" variant="outline" size="sm" className="mt-2" onClick={async () => {
+                  const loc = editForm.location as any;
+                  if (!loc?.address && !loc?.city) return;
+                  const q = [loc.address, loc.city, loc.province].filter(Boolean).join(', ') + ', Argentina';
+                  try {
+                    const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1&countrycodes=ar`);
+                    const data = await res.json();
+                    if (data.length > 0) {
+                      handleLocationField('lat', parseFloat(data[0].lat));
+                      handleLocationField('lng', parseFloat(data[0].lon));
+                      toast.success('Coordenadas actualizadas');
+                    } else {
+                      toast.error('No se encontró la dirección');
+                    }
+                  } catch { toast.error('Error al geocodificar'); }
+                }}>
+                  <MapPin size={14} className="mr-1" /> Buscar coordenadas
+                </Button>
+              </div>
+
+              {/* Cover image */}
+              <div className="border-t pt-4">
+                <Label className="text-base font-semibold mb-2 block">Imagen de portada</Label>
+                {(editForm.cover_image as string) ? (
+                  <div className="relative w-full h-40 rounded-lg overflow-hidden border">
+                    <img src={editForm.cover_image as string} alt="Portada" className="w-full h-full object-cover" />
+                    <button type="button" onClick={() => handleEditField('cover_image', '')} className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black transition">
+                      <X size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center h-32 border-2 border-dashed rounded-lg cursor-pointer border-slate-300 bg-slate-50 hover:border-primary/60 hover:bg-primary/5 transition">
+                    <Upload size={28} className="text-slate-400 mb-1" />
+                    <span className="text-xs text-slate-500">Click para subir portada</span>
+                    <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={async e => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      try {
+                        const result = await uploadImage(file);
+                        handleEditField('cover_image', result.url);
+                        toast.success('Imagen subida');
+                      } catch { toast.error('Error al subir'); }
+                      e.target.value = '';
+                    }} />
+                  </label>
+                )}
+              </div>
+
+              {/* Gallery images */}
+              <div>
+                <Label className="text-base font-semibold mb-2 block">Galería de imágenes</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {((editForm.images as string[]) || []).map((url, i) => (
+                    <div key={i} className="relative">
+                      <img src={url} alt={`Galería ${i+1}`} className="w-full h-20 object-cover rounded border" />
+                      <button type="button" onClick={() => handleEditField('images', ((editForm.images as string[]) || []).filter((_, j) => j !== i))} className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-0.5 hover:bg-black transition">
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
+                  <label className="flex items-center justify-center h-20 border-2 border-dashed rounded-lg cursor-pointer border-slate-300 bg-slate-50 hover:border-primary/60 hover:bg-primary/5 transition">
+                    <ImagePlus size={20} className="text-slate-400" />
+                    <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" multiple onChange={async e => {
+                      const files = Array.from(e.target.files || []);
+                      for (const file of files) {
+                        try {
+                          const result = await uploadImage(file);
+                          handleEditField('images', [...((editForm.images as string[]) || []), result.url]);
+                        } catch { toast.error('Error al subir'); }
+                      }
+                      e.target.value = '';
+                    }} />
+                  </label>
                 </div>
               </div>
 
