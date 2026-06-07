@@ -235,12 +235,18 @@ export const AdminDashboard: React.FC = () => {
                 
                 {/* IMAGEN */}
                 <div className="w-full md:w-64 h-48 md:h-auto bg-slate-100">
-                  <img 
-                    src={`https://picsum.photos/seed/${Array.isArray(event.category) ? event.category[0] : event.category}/400/300`}
-                    alt={event.title}
-                    className="w-full h-full object-cover"
-                    referrerPolicy="no-referrer"
-                  />
+                  {event.image_url ? (
+                    <img src={event.image_url} alt={event.title} className="w-full h-full object-cover" />
+                  ) : event.cover_image ? (
+                    <img src={event.cover_image} alt={event.title} className="w-full h-full object-cover" />
+                  ) : (
+                    <img 
+                      src={`https://picsum.photos/seed/${Array.isArray(event.category) ? event.category[0] : event.category}/400/300`}
+                      alt={event.title}
+                      className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                  )}
                 </div>
 
                 {/* CONTENIDO */}
