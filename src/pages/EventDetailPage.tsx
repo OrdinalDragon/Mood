@@ -50,8 +50,10 @@ export const EventDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [attending, setAttending] = useState(false);
   const [attendeeCount, setAttendeeCount] = useState(0);
-  const [editOpen, setEditOpen] = useState(false);
-  const [editForm, setEditForm] = useState<Partial<Event>>({});
+const [editOpen, setEditOpen] = useState(false);
+const [editForm, setEditForm] = useState<Partial<Event>>({});
+const [galleryOpen, setGalleryOpen] = useState(false);
+const [selectedImage, setSelectedImage] = useState('');
 
   useEffect(() => {
     if (!id) {
@@ -200,7 +202,10 @@ export const EventDetailPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-muted">
-      <div className="relative h-64 md:h-80 bg-gradient-to-br from-primary via-accent to-primary/60">
+      <div className={`relative h-64 md:h-80 ${event.cover_image ? '' : 'bg-gradient-to-br from-primary via-accent to-primary/60'}`}>
+        {event.cover_image && (
+          <img src={event.cover_image} alt="" className="absolute inset-0 w-full h-full object-cover" />
+        )}
         <Link 
           to="/" 
           className="absolute top-4 left-4 z-10 p-2 bg-white/90 rounded-full hover:bg-white transition-colors"
@@ -262,6 +267,25 @@ export const EventDetailPage: React.FC = () => {
                       Cómo llegar
                     </a>
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-6">
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-4">Galería</h2>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {(event.images || []).length > 0 ? (
+                    (event.images as string[]).map((url, i) => (
+                      <div key={i} className="relative group cursor-pointer" onClick={() => {
+                        setSelectedImage(url);
+                        setGalleryOpen(true);
+                      }}>
+                        <img src={url} alt={`Galería ${i+1}`} className="w-full h-32 object-cover rounded-lg border" />
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-slate-400 text-sm col-span-full">Sin imágenes</p>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -539,6 +563,18 @@ export const EventDetailPage: React.FC = () => {
                 } catch { toast.error("Error al actualizar"); }
               }} className="bg-primary text-white">Guardar Cambios</Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Gallery image viewer */}
+      <Dialog open={galleryOpen} onOpenChange={setGalleryOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Imagen</DialogTitle>
+          </DialogHeader>
+          <div className="flex justify-center">
+            <img src={selectedImage} alt="Galería" className="max-w-full max-h-[70vh] rounded-lg object-contain" />
           </div>
         </DialogContent>
       </Dialog>

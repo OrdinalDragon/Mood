@@ -81,12 +81,20 @@ const getCategoryColor = (cat: string): string => {
       <Card className="h-full cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden group">
         {/* Imagen del evento */}
         <div className="h-40 bg-slate-200 relative overflow-hidden">
-          <img
-            src={`https://picsum.photos/seed/${event.id}/400/300`}
-            alt={event.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            referrerPolicy="no-referrer"
-          />
+          {event.cover_image ? (
+            <img
+              src={event.cover_image}
+              alt={event.title}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+          ) : (
+            <img
+              src={`https://picsum.photos/seed/${event.id}/400/300`}
+              alt={event.title}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              referrerPolicy="no-referrer"
+            />
+          )}
           {/* Badges de categorías */}
           <div className="absolute top-3 left-3 flex gap-1 flex-wrap max-w-[80%]">
             {(Array.isArray(event.category) ? event.category : [event.category]).map((cat, idx) => (
