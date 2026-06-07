@@ -8,7 +8,7 @@
 
 // React Router para navegación
 import { BrowserRouter as Router, Routes, Route, Link, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
-import { LocateFixed } from 'lucide-react';
+import { LocateFixed, MapPin, Calendar } from 'lucide-react';
 
 // Context de autenticación
 import { AuthProvider } from './hooks/useAuth';
@@ -241,6 +241,7 @@ function MapPage() {
   const centerLng = searchParams.get('center_lng');
   const userLocation: [number, number] | null = lat && lng ? [parseFloat(lat), parseFloat(lng)] : null;
   const mapCenter: [number, number] | undefined = centerLat && centerLng ? [parseFloat(centerLat), parseFloat(centerLng)] : userLocation || undefined;
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const geoInitDone = useRef(false);
   const urlSyncDone = useRef(false);
 
@@ -573,8 +574,152 @@ function MapPage() {
           </div>
         </div>
         
-        {/* Mapa centrado en ubicación del usuario o CABA */}
-        <EventMap events={events} center={mapCenter} zoom={8} autoMove={autoMove} autoMoveKey={autoMoveKey} userLocation={userLocation} />
+        <div className="flex gap-4">
+          {/* Sidebar izquierdo: lista de eventos */}
+          <div className="hidden lg:block w-[320px] flex-shrink-0">
+            <div className="sticky top-20 h-[600px] overflow-y-auto space-y-3 pr-2">
+              {events.length === 0 ? (
+                <div className="text-center text-slate-500 dark:text-slate-400 text-sm py-8">
+                  {lat && lng
+                    ? 'No hay eventos cerca de esta ubicación'
+                    : 'Buscá una ciudad o activá tu ubicación para ver eventos cercanos'}
+                </div>
+              ) : (
+                events.map((event) => {
+                  const eventMoods = event.moods || [];
+                  const distance = (event as any).distance;
+                  return (
+                    <button
+                      key={event.id}
+                      onClick={() => setSelectedEvent(event)}
+                      className={`w-full text-left p-3 rounded-xl border transition-all ${
+                        selectedEvent?.id === event.id
+                          ? 'border-primary bg-primary/5 dark:bg-primary/10 shadow-sm'
+                          : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:shadow-md hover:border-slate-300 dark:hover:border-slate-600'
+                      }`}
+                    >
+                      <div className="flex items-start gap-2 mb-1.5">
+                        <Badge className={`text-[10px] px-1.5 py-0 ${selectedEvent?.id === event.id ? 'bg-primary text-white' : 'bg-primary/15 text-primary'}`}>
+                          {categoryLabels[event.category] || event.category}
+                        </Badge>
+                        {event.is_free && (
+                          <span className="text-[10px] font-semibold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-1.5 py-0.5 rounded">GRATIS</span>
+                        )}
+                      </div>
+                      <p className="text-sm font-semibold text-slate-900 dark:text-white line-clamp-1 mb-1">{event.title}</p>
+                      {eventMoods.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mb-1">
+                          {eventMoods.map((mId: string) => {
+                            const m = MOODS.find(mo => mo.id === mId);
+                            return m ? (
+                              <span key={mId} className="text-[11px] text-slate-500 dark:text-slate-400">{m.emoji} {m.label}</span>
+                            ) : null;
+                          })}
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2 text-[11px] text-slate-400 dark:text-slate-500">
+                        <span>{(() => { const d = new Date(event.date); return isNaN(d.getTime()) ? '' : d.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' }); })()}</span>
+                        {distance !== undefined && (
+                          <span className="flex items-center gap-0.5">
+                            <MapPin size={10} /> {distance} km
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          {/* Mapa centrado en ubicación del usuario o CABA */}
+          <div className="flex-1 min-w-0">
+            <EventMap events={events} center={mapCenter} zoom={8} autoMove={autoMove} autoMoveKey={autoMoveKey} userLocation={userLocation} onEventClick={setSelectedEvent} />
+          </div>
+
+          {/* Sidebar derecho: detalle rápido del evento seleccionado */}
+          <div className="hidden lg:block w-[320px] flex-shrink-0">
+            <div className="sticky top-20 h-[600px] overflow-y-auto">
+              {!selectedEvent ? (
+                <div className="flex flex-col items-center justify-center h-full text-center text-slate-400 dark:text-slate-500 text-sm px-4">
+                  <MapPin size={32} className="mb-3 opacity-40" />
+                  <p>Seleccioná un evento en el mapa o en la lista para ver sus detalles</p>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden">
+                  {/* Imagen */}
+                  <div className="h-40 bg-slate-100 dark:bg-slate-700 overflow-hidden">
+                    <img 
+                      src={`https://picsum.photos/seed/${selectedEvent.id}/400/200`} 
+                      alt={selectedEvent.title}
+                      className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
+                  <div className="p-4 space-y-3">
+                    {/* Categoría y gratis */}
+                    <div className="flex items-center gap-2">
+                      <Badge className="bg-primary/15 text-primary">
+                        {categoryLabels[selectedEvent.category] || selectedEvent.category}
+                      </Badge>
+                      {selectedEvent.is_free && (
+                        <span className="text-xs font-semibold text-green-600 dark:text-green-400">GRATIS</span>
+                      )}
+                    </div>
+                    
+                    {/* Título */}
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white leading-tight">{selectedEvent.title}</h3>
+                    
+                    {/* Estados de ánimo */}
+                    {(selectedEvent.moods || []).length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {(selectedEvent.moods || []).map((mId: string) => {
+                          const m = MOODS.find(mo => mo.id === mId);
+                          return m ? (
+                            <span key={mId} className="text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-full">
+                              {m.emoji} {m.label}
+                            </span>
+                          ) : null;
+                        })}
+                      </div>
+                    )}
+                    
+                    {/* Descripción */}
+                    <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-3 leading-relaxed">
+                      {selectedEvent.description}
+                    </p>
+                    
+                    {/* Fecha y ubicación */}
+                    <div className="space-y-1.5 text-sm text-slate-500 dark:text-slate-400">
+                      <div className="flex items-center gap-2">
+                        <Calendar size={14} className="flex-shrink-0" />
+                        <span>{(() => { const d = new Date(selectedEvent.date); return isNaN(d.getTime()) ? '' : d.toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' }); })()}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <MapPin size={14} className="flex-shrink-0" />
+                        <span className="line-clamp-1">{selectedEvent.location.address}, {selectedEvent.location.city}</span>
+                      </div>
+                      {(selectedEvent as any).distance !== undefined && (
+                        <div className="flex items-center gap-2">
+                          <LocateFixed size={14} className="flex-shrink-0" />
+                          <span>A {(selectedEvent as any).distance} km de distancia</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Botón ver más */}
+                    <button
+                      onClick={() => navigate(`/event/${selectedEvent.id}`)}
+                      className="w-full py-2.5 bg-primary text-primary-foreground text-sm font-semibold rounded-lg hover:bg-primary/90 transition-colors"
+                    >
+                      Ver detalles completos →
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

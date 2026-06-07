@@ -124,6 +124,7 @@ interface EventMapProps {
   autoMove?: boolean;       // Si mueve el mapa automáticamente al cambiarel filtro
   autoMoveKey?: number;     // Cambiar este valor fuerza re-centro (ignora interacción manual)
   userLocation?: [number, number] | null; // Ubicación del usuario para marcador azul
+  onEventClick?: (event: Event) => void; // Callback al hacer clic en un marcador
 }
 
 
@@ -293,7 +294,8 @@ export const EventMap: React.FC<EventMapProps> = ({
   interactive = true,
   autoMove = true,
   autoMoveKey,
-  userLocation = null
+  userLocation = null,
+  onEventClick
 }) => {
   // Hook de navegación
   const navigate = useNavigate();
@@ -368,7 +370,7 @@ export const EventMap: React.FC<EventMapProps> = ({
             eventHandlers={{
               click: () => {
                 if (interactive) {
-                  navigate(`/event/${event.id}`);
+                  onEventClick?.(event);
                 }
               }
             }}
@@ -398,13 +400,22 @@ export const EventMap: React.FC<EventMapProps> = ({
                       {event.location.city}
                     </div>
                     <button 
-                      className="w-full py-2 bg-primary text-primary-foreground text-xs font-bold rounded-lg hover:bg-primary/90 transition-colors"
+                      className="w-full py-2 bg-primary text-primary-foreground text-xs font-bold rounded-lg hover:bg-primary/90 transition-colors mb-1"
                       onClick={(e: React.MouseEvent) => {
                         e.stopPropagation();
                         navigate(`/event/${event.id}`);
                       }}
                     >
                       Ver Detalles
+                    </button>
+                    <button 
+                      className="w-full py-1.5 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors"
+                      onClick={(e: React.MouseEvent) => {
+                        e.stopPropagation();
+                        onEventClick?.(event);
+                      }}
+                    >
+                      Vista rápida
                     </button>
                   </div>
                 </CardContent>
