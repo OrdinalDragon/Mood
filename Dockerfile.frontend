@@ -17,7 +17,9 @@ RUN npm ci
 COPY . .
 
 # Build the app
-RUN VITE_API_URL=/api npm run build
+ARG VITE_GOOGLE_CLIENT_ID
+ARG VITE_FRONTEND_URL
+RUN VITE_API_URL=/api VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID} VITE_FRONTEND_URL=${VITE_FRONTEND_URL} npm run build
 
 # Stage 2: Serve with Nginx
 FROM nginx:alpine

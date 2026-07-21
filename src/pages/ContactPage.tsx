@@ -1,4 +1,4 @@
-import { Mail, MapPin, ArrowLeft } from 'lucide-react';
+import { Mail, MapPin, Users, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 
@@ -23,7 +23,7 @@ export const ContactPage = () => {
             <Mail className="w-6 h-6 text-primary mt-1" />
             <div>
               <h3 className="font-semibold text-slate-900 dark:text-white">Correo electrónico</h3>
-              <p className="text-slate-600 dark:text-slate-300">ngsrepresentaciones@gmail.com</p>
+              <p className="text-slate-600 dark:text-slate-300">moodgrupo6@gmail.com</p>
             </div>
           </div>
           <div className="flex items-start gap-4">
@@ -31,6 +31,15 @@ export const ContactPage = () => {
             <div>
               <h3 className="font-semibold text-slate-900 dark:text-white">Ubicación</h3>
               <p className="text-slate-600 dark:text-slate-300">Ciudad Autónoma de Buenos Aires, Argentina</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-4">
+            <Users className="w-6 h-6 text-primary mt-1" />
+            <div>
+              <h3 className="font-semibold text-slate-900 dark:text-white">Integrantes</h3>
+              <p className="text-slate-600 dark:text-slate-300">
+                Nicolás Schernetzki, Maylen Speso, Aylén Roldán, Gaston Crespo, Mariano Mendez, Joel Aliendre, German Ramirez, Luciano Bustamante, Diego Ruda, Leonardo Nieto
+              </p>
             </div>
           </div>
         </div>

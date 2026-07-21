@@ -102,16 +102,16 @@ export const Navbar: React.FC = () => {
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           {/* Logo y nombre */}
           <Link to="/" className="flex items-center gap-2">
-<img 
-               src="/icono.webp" 
-               alt="MOOD" 
-               className="h-12 w-auto max-w-[48px] rounded-xl object-contain"
-             />
-<img 
-               src="/minimood.webp" 
-               alt="MOOD" 
-               className="h-8 w-auto object-contain"
-             />
+            <img 
+              src="/icono.webp" 
+              alt="MOOD" 
+              className="h-12 w-auto max-w-[48px] rounded-xl object-contain"
+            />
+            <img 
+              src="/minimood.webp" 
+              alt="MOOD" 
+              className="hidden sm:block h-8 w-auto object-contain"
+            />
           </Link>
 
           {/* Links de navegación (hidden en mobile) */}
@@ -143,7 +143,7 @@ export const Navbar: React.FC = () => {
                   className={cn(
                     "w-8 h-8 flex items-center justify-center rounded-full text-base transition-all",
                     activeMood === mood.id
-                      ? "bg-primary text-primary-foreground shadow-sm scale-110"
+                      ? "emoji-btn-active shadow-sm scale-110"
                       : "text-slate-400 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
                     )}
                     title={mood.label}
@@ -207,13 +207,13 @@ export const Navbar: React.FC = () => {
                 <Button 
                   variant="outline"
                   onClick={() => setRegisterOpen(true)}
-                  className="rounded-full px-4"
+                  className="rounded-full px-6 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
                 >
                   Registrarse
                 </Button>
                 <Button 
                   onClick={() => setLoginOpen(true)} 
-                  className="bg-primary hover:bg-primary/90 text-white rounded-full px-6"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-6"
                 >
                   Ingresar
                 </Button>
@@ -242,7 +242,7 @@ export const Navbar: React.FC = () => {
             className={cn(
               "w-9 h-9 flex items-center justify-center rounded-full text-lg transition-all",
               activeMood === mood.id
-                ? "bg-primary text-primary-foreground shadow-sm scale-110"
+                ? "emoji-btn-active shadow-sm scale-110"
                 : "text-slate-400 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
             )}
             title={mood.label}

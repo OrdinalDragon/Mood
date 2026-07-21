@@ -80,7 +80,7 @@ const getCategoryColor = (cat: string): string => {
     <Link to={`/event/${event.id}`}>
       <Card className="h-full cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden group">
         {/* Imagen del evento */}
-        <div className="h-40 bg-slate-200 relative overflow-hidden">
+        <div className="h-40 bg-muted relative overflow-hidden">
           {event.image_url ? (
             <img
               src={event.image_url}
@@ -104,7 +104,7 @@ const getCategoryColor = (cat: string): string => {
           {/* Badges de categorías */}
           <div className="absolute top-3 left-3 flex gap-1 flex-wrap max-w-[80%]">
             {(Array.isArray(event.category) ? event.category : [event.category]).map((cat, idx) => (
-              <Badge key={idx} className={`${getCategoryColor(cat)} text-white border-0 text-xs`}>
+              <Badge key={idx} className={`${getCategoryColor(cat)} border-0 text-xs`}>
                 {getCategoryLabel(cat)}
               </Badge>
             ))}
@@ -114,12 +114,12 @@ const getCategoryColor = (cat: string): string => {
         {/* Contenido textual */}
         <CardContent className="p-4">
           {/* Título */}
-          <h3 className="font-bold text-slate-900 dark:text-white line-clamp-2 mb-2 group-hover:text-primary transition-colors">
+          <h3 className="font-bold text-card-foreground line-clamp-2 mb-2 group-hover:text-primary transition-colors">
             {event.title}
           </h3>
           
           {/* Fecha */}
-          <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 mb-1">
+          <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
             <Calendar size={12} />
             {(() => {
               let d: Date;
@@ -140,7 +140,7 @@ const getCategoryColor = (cat: string): string => {
           </div>
           
           {/* Ciudad */}
-          <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
             <MapPin size={12} />
             {event.location.city}
           </div>

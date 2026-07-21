@@ -11,6 +11,8 @@ import { Label } from '@/components/ui/label';
 import { Eye, EyeOff, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
+import { GoogleLogin } from '@react-oauth/google';
+import { ForgotPasswordDialog } from './ForgotPasswordDialog';
 
 interface LoginDialogProps {
   open: boolean;
@@ -25,7 +27,9 @@ export const LoginDialog: React.FC<LoginDialogProps> = ({ open, onOpenChange, on
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
-  const { login: loginContext } = useAuth();
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resending, setResending] = useState(false);
+  const { login: loginContext, googleLogin: googleLoginContext, resendVerification } = useAuth();
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,7 +53,40 @@ export const LoginDialog: React.FC<LoginDialogProps> = ({ open, onOpenChange, on
           <DialogTitle className="text-2xl font-bold text-center">¡Bienvenido de vuelta!</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleEmailLogin} className="space-y-4 mt-4">
+        <div className="mb-4">
+          <GoogleLogin
+            onSuccess={async (credentialResponse) => {
+              if (credentialResponse.credential) {
+                try {
+                  await googleLoginContext(credentialResponse.credential);
+                  onOpenChange(false);
+                  toast.success('Bienvenido!');
+                } catch (err: any) {
+                  toast.error(err.message || 'Error al iniciar sesión con Google');
+                }
+              }
+            }}
+            onError={() => toast.error('Error al iniciar sesión con Google')}
+            theme="outline"
+            size="large"
+            text="continue_with"
+            shape="rectangular"
+            width="100%"
+          />
+        </div>
+
+        <div className="relative mb-4">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t border-gray-300 dark:border-gray-600" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-white dark:bg-slate-900 px-2 text-gray-500 dark:text-gray-400">
+              o continúa con
+            </span>
+          </div>
+        </div>
+
+        <form onSubmit={handleEmailLogin} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">Correo electrónico</Label>
             <div className="relative">
@@ -101,10 +138,39 @@ export const LoginDialog: React.FC<LoginDialogProps> = ({ open, onOpenChange, on
                 Recordarme
               </Label>
             </div>
+            <button
+              type="button"
+              onClick={() => setShowForgotPassword(true)}
+              className="text-sm text-primary hover:underline font-medium"
+            >
+              ¿Olvidaste tu contraseña?
+            </button>
           </div>
 
           {error && (
-            <p className="text-sm text-red-500 text-center bg-red-50 p-2 rounded-md">{error}</p>
+            <div className="text-sm text-red-500 text-center bg-red-50 p-2 rounded-md">
+              <p>{error}</p>
+              {error.includes('Verificá tu email') && (
+                <button
+                  type="button"
+                  disabled={resending}
+                  onClick={async () => {
+                    setResending(true);
+                    try {
+                      await resendVerification(email);
+                      toast.success('Email de verificación reenviado');
+                    } catch (err: any) {
+                      toast.error(err.message || 'Error al reenviar');
+                    } finally {
+                      setResending(false);
+                    }
+                  }}
+                  className="mt-2 text-primary hover:underline font-medium"
+                >
+                  {resending ? 'Reenviando...' : 'Reenviar email de verificación'}
+                </button>
+              )}
+            </div>
           )}
 
           <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={loading}>
@@ -122,6 +188,12 @@ export const LoginDialog: React.FC<LoginDialogProps> = ({ open, onOpenChange, on
             Regístrate
           </button>
         </p>
+
+        <ForgotPasswordDialog
+          open={showForgotPassword}
+          onOpenChange={setShowForgotPassword}
+          onBackToLogin={() => setShowForgotPassword(false)}
+        />
       </DialogContent>
     </Dialog>
   );

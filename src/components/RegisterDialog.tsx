@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/useAuth';
 import { Eye, EyeOff, Mail, Lock, User, Phone } from 'lucide-react';
 import { toast } from 'sonner';
+import { GoogleLogin } from '@react-oauth/google';
 import { sanitizeInput } from '@/lib/sanitizer';
 
 interface RegisterDialogProps {
@@ -95,7 +96,7 @@ export const RegisterDialog: React.FC<RegisterDialogProps> = ({ open, onOpenChan
     return true;
   };
 
-  const { register: registerContext } = useAuth();
+  const { register: registerContext, googleLogin: googleLoginContext } = useAuth();
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,11 +107,10 @@ export const RegisterDialog: React.FC<RegisterDialogProps> = ({ open, onOpenChan
 
     try {
       await registerContext(formData.email, formData.password, formData.fullName);
-      toast.success('Cuenta creada correctamente.');
+      toast.success('Revisá tu email (incluyendo correo no deseado) para verificar la cuenta');
       onOpenChange(false);
       setFormData({ fullName: '', email: '', password: '', confirmPassword: '', phone: '' });
     } catch (err: any) {
-      // Mostrar el error del backend
       const errorMessage = err.message || 'Error al registrarse';
       setError(errorMessage.includes('400') ? 'El correo ya está registrado' : errorMessage);
     } finally {
@@ -125,7 +125,41 @@ export const RegisterDialog: React.FC<RegisterDialogProps> = ({ open, onOpenChan
           <DialogTitle className="text-2xl font-bold text-center">Crear Cuenta</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleRegister} className="space-y-4 mt-4">
+        <div className="mb-4">
+          <GoogleLogin
+            onSuccess={async (credentialResponse) => {
+              if (credentialResponse.credential) {
+                try {
+                  await googleLoginContext(credentialResponse.credential);
+                  onOpenChange(false);
+                  toast.success('Cuenta creada correctamente.');
+                  setFormData({ fullName: '', email: '', password: '', confirmPassword: '', phone: '' });
+                } catch (err: any) {
+                  toast.error(err.message || 'Error al registrarse con Google');
+                }
+              }
+            }}
+            onError={() => toast.error('Error al registrarse con Google')}
+            theme="outline"
+            size="large"
+            text="signup_with"
+            shape="rectangular"
+            width="100%"
+          />
+        </div>
+
+        <div className="relative mb-4">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t border-gray-300 dark:border-gray-600" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-white dark:bg-slate-900 px-2 text-gray-500 dark:text-gray-400">
+              o regístrate con
+            </span>
+          </div>
+        </div>
+
+        <form onSubmit={handleRegister} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="fullName">Nombre completo</Label>
             <div className="relative">

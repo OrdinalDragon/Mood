@@ -4,18 +4,16 @@
 import math
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-from app.database import get_db
-from app.models import Event, EventStatus, User
+from app.models import Event, User
 from app.schemas import EventCreate, EventUpdate, EventResponse, EventListResponse
 from app.routes.auth import get_current_user
 from datetime import datetime, timedelta
 
 router = APIRouter(prefix="/events", tags=["Events"])
 
+
 @router.get("/", response_model=List[EventListResponse])
-def list_events(
-    db: Session = Depends(get_db),
+async def list_events(
     status_filter: Optional[str] = None,
     category: Optional[str] = None,
     province: Optional[str] = None,
@@ -31,70 +29,69 @@ def list_events(
     radius_km: Optional[float] = 50
 ):
     """Lista eventos con filtros opcionales."""
-    query = db.query(Event)
-    
+    filters = []
+
     if status_filter:
-        try:
-            status_enum = EventStatus(status_filter)
-            query = query.filter(Event.status == status_enum)
-        except:
-            query = query.filter(Event.status == EventStatus.approved)
+        filters.append(Event.status == status_filter)
     else:
-        query = query.filter(Event.status == EventStatus.approved)
-    
+        filters.append(Event.status == "approved")
+
     if is_free and is_free.lower() in ('true', '1'):
-        query = query.filter(Event.is_free == True)
-    
+        filters.append(Event.is_free == True)
+
     if is_outdoor and is_outdoor.lower() in ('true', '1'):
-        query = query.filter(Event.is_outdoor == True)
-    
+        filters.append(Event.is_outdoor == True)
+
     if today and today.lower() in ('true', '1'):
         now = datetime.utcnow()
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
         today_end = today_start + timedelta(days=1)
-        query = query.filter(Event.date >= today_start, Event.date < today_end)
-    
+        filters.append(Event.date >= today_start)
+        filters.append(Event.date < today_end)
+
     if weekend and weekend.lower() in ('true', '1'):
         now = datetime.utcnow()
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
         week_end = today_start + timedelta(days=(6 - today_start.weekday()))
         week_start = week_end - timedelta(days=2)
-        query = query.filter(Event.date >= week_start, Event.date < week_end + timedelta(days=1))
-    
-    events = query.order_by(Event.date.desc()).all()
-    
-    # Filtro por estado de ánimo (independiente de categoría)
+        filters.append(Event.date >= week_start)
+        filters.append(Event.date < week_end + timedelta(days=1))
+
+    query = Event.find(*filters).sort("-date")
+    events = await query.to_list()
+
+    # Filtro por estado de ánimo
     if mood:
         mood_lower = mood.lower().strip()
         events = [
-            e for e in events 
+            e for e in events
             if e.moods and mood_lower in [m.lower() for m in e.moods]
         ]
-    
-    # Filtrar por categoría en Python
+
+    # Filtrar por categoría
     if category:
         cat_lower = category.lower().strip()
         events = [
-            e for e in events 
+            e for e in events
             if e.category and cat_lower in [c.lower() for c in e.category]
         ]
-    
+
     # Filtrar por provincia
     if province and province.lower().strip() not in ['', 'todos']:
         province_clean = province.lower().strip()
         events = [
-            e for e in events 
+            e for e in events
             if e.location and province_clean in e.location.get('province', '').lower().strip()
         ]
-    
+
     # Filtrar por ciudad
     if city and city.lower().strip() not in ['', 'todos']:
         city_clean = city.lower().strip()
         events = [
-            e for e in events 
+            e for e in events
             if e.location and city_clean in e.location.get('city', '').lower().strip()
         ]
-    
+
     # Filtrar por cercanía (Haversine)
     if lat is not None and lng is not None:
         r = 6371
@@ -123,11 +120,10 @@ def list_events(
     if search:
         search_lower = search.lower().strip()
         events = [
-            e for e in events 
+            e for e in events
             if search_lower in e.title.lower() or search_lower in (e.description or '').lower()
         ]
-    
-    # Incluir distance si existe
+
     result = []
     for e in events:
         d = {
@@ -136,7 +132,7 @@ def list_events(
             'moods': e.moods, 'cover_image': e.cover_image,
             'image_url': e.image_url,
             'is_free': e.is_free, 'is_outdoor': e.is_outdoor,
-            'status': e.status.value if e.status else 'pending',
+            'status': e.status,
         }
         dist = getattr(e, '_distance', None)
         if dist is not None:
@@ -144,8 +140,9 @@ def list_events(
         result.append(d)
     return result
 
+
 @router.get("/counts")
-def get_event_counts(db: Session = Depends(get_db)):
+async def get_event_counts():
     """Devuelve counts reales: today, weekend, free, outdoor."""
     now = datetime.utcnow()
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -153,7 +150,7 @@ def get_event_counts(db: Session = Depends(get_db)):
     week_end = today_start + timedelta(days=(6 - today_start.weekday()))
     week_start = week_end - timedelta(days=2)
 
-    all_approved = db.query(Event).filter(Event.status == EventStatus.approved).all()
+    all_approved = await Event.find(Event.status == "approved").to_list()
 
     today_count = sum(1 for e in all_approved if today_start <= e.date < today_end)
     weekend_count = sum(1 for e in all_approved if week_start <= e.date < week_end + timedelta(days=1))
@@ -167,31 +164,30 @@ def get_event_counts(db: Session = Depends(get_db)):
         "outdoor": outdoor_count
     }
 
+
 @router.get("/{event_id}", response_model=EventResponse)
-def get_event(event_id: str, db: Session = Depends(get_db)):
+async def get_event(event_id: str):
     """Obtiene un evento por su ID."""
-    event = db.query(Event).filter(Event.id == event_id).first()
+    event = await Event.find_one(Event.id == event_id)
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
     return event
 
+
 @router.post("/", response_model=EventResponse, status_code=status.HTTP_201_CREATED)
-def create_event(event_create: EventCreate, db: Session = Depends(get_db)):
+async def create_event(event_create: EventCreate):
     """Crea un nuevo evento."""
-    # Verificar o crear usuario anonymous
-    anonymous_user = db.query(User).filter(User.uid == "anonymous").first()
+    anonymous_user = await User.find_one(User.uid == "anonymous")
     if not anonymous_user:
-        anonymous_user = User(
+        anonymous_user = await User(
             uid="anonymous",
             email="anonymous@mood.com",
             display_name="Usuario Anónimo",
             role="user",
             password_hash="",
             created_at=datetime.utcnow()
-        )
-        db.add(anonymous_user)
-        db.commit()
-    
+        ).create()
+
     new_event = Event(
         id=event_create.title.lower().replace(" ", "-")[:36],
         title=event_create.title,
@@ -205,62 +201,60 @@ def create_event(event_create: EventCreate, db: Session = Depends(get_db)):
         image_url=event_create.image_url,
         is_free=event_create.is_free,
         is_outdoor=event_create.is_outdoor,
-        status=EventStatus.pending,
+        status="pending",
         created_by="anonymous",
         author_name="Usuario"
     )
-    db.add(new_event)
-    db.commit()
-    db.refresh(new_event)
+    await new_event.create()
     return new_event
 
+
 @router.patch("/{event_id}/approve", response_model=EventResponse)
-def approve_event(event_id: str, db: Session = Depends(get_db)):
+async def approve_event(event_id: str):
     """Aprueba un evento."""
-    event = db.query(Event).filter(Event.id == event_id).first()
+    event = await Event.find_one(Event.id == event_id)
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
-    event.status = EventStatus.approved
-    db.commit()
-    db.refresh(event)
+    event.status = "approved"
+    await event.save()
     return event
+
 
 @router.patch("/{event_id}/reject", response_model=EventResponse)
-def reject_event(event_id: str, db: Session = Depends(get_db)):
+async def reject_event(event_id: str):
     """Rechaza un evento."""
-    event = db.query(Event).filter(Event.id == event_id).first()
+    event = await Event.find_one(Event.id == event_id)
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
-    event.status = EventStatus.rejected
-    db.commit()
-    db.refresh(event)
+    event.status = "rejected"
+    await event.save()
     return event
 
+
 @router.delete("/{event_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_event(event_id: str, db: Session = Depends(get_db)):
+async def delete_event(event_id: str):
     """Elimina un evento."""
-    event = db.query(Event).filter(Event.id == event_id).first()
+    event = await Event.find_one(Event.id == event_id)
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
-    db.delete(event)
-    db.commit()
+    await event.delete()
+
 
 @router.put("/{event_id}", response_model=EventResponse)
-def update_event(
+async def update_event(
     event_id: str,
     event_update: EventUpdate,
-    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Actualiza un evento existente. Solo admins."""
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Solo admins pueden editar eventos")
-    event = db.query(Event).filter(Event.id == event_id).first()
+    event = await Event.find_one(Event.id == event_id)
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
-    
+
     update_data = event_update.model_dump(exclude_unset=True)
-    
+
     if 'title' in update_data and update_data['title']:
         event.title = update_data['title']
     if 'description' in update_data:
@@ -283,7 +277,6 @@ def update_event(
         event.is_free = update_data['is_free']
     if 'is_outdoor' in update_data:
         event.is_outdoor = update_data['is_outdoor']
-    
-    db.commit()
-    db.refresh(event)
+
+    await event.save()
     return event

@@ -1,42 +1,48 @@
 # ============================================================
-# app/models/__init__.py - Modelos de Datos
+# app/models.py - Modelos MongoDB (Beanie ODM)
 # ============================================================
-from sqlalchemy import Column, String, Text, DateTime, Enum, ForeignKey, JSON
-from sqlalchemy.orm import relationship
-from app.database import Base
-import enum
+from beanie import Document
+from datetime import datetime
+from typing import Optional
 
-class EventStatus(enum.Enum):
-    pending = "pending"
-    approved = "approved"
-    rejected = "rejected"
 
-class Event(Base):
-    __tablename__ = "events"
-    
-    id = Column(String(36), primary_key=True)
-    title = Column(String(255), nullable=False)
-    description = Column(Text)
-    date = Column(DateTime, nullable=False)
-    end_date = Column(DateTime)
-    location = Column(JSON)
-    category = Column(JSON)
-    categories = Column(JSON)
-    status = Column(Enum(EventStatus), default=EventStatus.pending)
-    created_by = Column(String(36), nullable=False)
-    author_name = Column(String(255))
-    is_recurring = Column(String(1))
-    recurrence_rule = Column(String(100))
-    image_url = Column(String(500))
-    created_at = Column(DateTime)
-    updated_at = Column(DateTime)
+class Event(Document):
+    id: str
+    title: str
+    description: Optional[str] = None
+    date: datetime
+    end_date: Optional[datetime] = None
+    location: Optional[dict] = None
+    category: Optional[list] = None
+    categories: Optional[list] = None
+    status: str = "pending"
+    created_by: str
+    author_name: Optional[str] = None
+    moods: Optional[list] = None
+    is_recurring: bool = False
+    recurrence_rule: Optional[str] = None
+    image_url: Optional[str] = None
+    cover_image: Optional[str] = None
+    images: Optional[list] = None
+    is_free: bool = False
+    is_outdoor: bool = False
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
-class User(Base):
-    __tablename__ = "users"
-    
-    uid = Column(String(36), primary_key=True)
-    email = Column(String(255), unique=True, nullable=False)
-    display_name = Column(String(255))
-    role = Column(String(20), default="user")
-    photo_url = Column(String(500))
-    created_at = Column(DateTime)
+    class Settings:
+        name = "events"
+
+
+class User(Document):
+    uid: str
+    email: str
+    display_name: Optional[str] = None
+    role: str = "user"
+    photo_url: Optional[str] = None
+    created_at: Optional[datetime] = None
+    password_hash: Optional[str] = None
+    email_verified: str = "0"
+    verification_token: Optional[str] = None
+
+    class Settings:
+        name = "users"

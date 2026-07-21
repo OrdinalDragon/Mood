@@ -327,7 +327,7 @@ export const EventMap: React.FC<EventMapProps> = ({
           onClick={() => setMapLocked(prev => !prev)}
           className={`absolute top-3 right-3 z-[1000] px-3 py-1.5 rounded-full text-xs font-bold shadow-lg transition-colors pointer-events-auto ${
             mapLocked
-              ? 'bg-primary text-white'
+              ? 'bg-primary text-primary-foreground'
               : 'bg-white/90 dark:bg-slate-800/90 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600'
           }`}
         >
@@ -385,7 +385,7 @@ export const EventMap: React.FC<EventMapProps> = ({
                       className="w-full h-full object-cover"
                       referrerPolicy="no-referrer"
                     />
-                    <Badge className={`absolute top-2 right-2 ${getCategoryColor(event.category)} text-white border-0`}>
+                    <Badge className={`absolute top-2 right-2 ${getCategoryColor(event.category)} text-primary-foreground border-0`}>
                       {categoryLabels[event.category] || event.category}
                     </Badge>
                   </div>

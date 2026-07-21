@@ -124,8 +124,11 @@ export const TerminosYCondiciones = () => {
               Para preguntas o comentarios sobre estos Términos y Condiciones, puede contactarnos en:
             </p>
             <p className="text-slate-700 dark:text-slate-300 mt-2">
-              <strong>Correo electrónico:</strong> ngsrepresentaciones@gmail.com<br />
+              <strong>Correo electrónico:</strong> moodgrupo6@gmail.com<br />
               <strong>Dirección:</strong> Ciudad Autónoma de Buenos Aires, Argentina
+            </p>
+            <p className="text-slate-700 dark:text-slate-300 mt-2">
+              <strong>Integrantes:</strong> Nicolás Schernetzki, Maylen Speso, Aylén Roldán, Gaston Crespo, Mariano Mendez, Joel Aliendre, German Ramirez, Luciano Bustamante, Diego Ruda, Leonardo Nieto
             </p>
           </section>
 

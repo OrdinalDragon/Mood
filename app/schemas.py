@@ -85,3 +85,15 @@ class UserResponse(BaseModel):
     role: str = "user"
     photo_url: Optional[str] = None
     created_at: Optional[datetime] = None
+
+
+class UserAdminResponse(BaseModel):
+    uid: str
+    email: str
+    display_name: Optional[str] = None
+    role: str = "user"
+    photo_url: Optional[str] = None
+    created_at: Optional[datetime] = None
+    email_verified: str = "0"
+    auth_provider: str = "email"
+    google_id: Optional[str] = None

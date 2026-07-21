@@ -8,11 +8,16 @@ interface MoodContextType {
 
 const MoodContext = createContext<MoodContextType | undefined>(undefined);
 
-const VALID_MOODS = ['alegre', 'triste', 'enojado', 'abrumado', 'reservado'];
+const VALID_MOODS = ['alegre', 'triste', 'enojado', 'tranquilo', 'reservado'];
+
+const MOOD_ALIASES: Record<string, string> = {
+  abrumado: 'tranquilo',
+};
 
 function applyTheme(mood: string | null) {
-  if (mood && VALID_MOODS.includes(mood)) {
-    document.documentElement.setAttribute('data-mood', mood);
+  const resolved = (mood && MOOD_ALIASES[mood]) || mood;
+  if (resolved && VALID_MOODS.includes(resolved)) {
+    document.documentElement.setAttribute('data-mood', resolved);
   } else {
     document.documentElement.removeAttribute('data-mood');
   }
@@ -21,7 +26,8 @@ function applyTheme(mood: string | null) {
 export function MoodProvider({ children }: { children: React.ReactNode }) {
   const [mood, setMoodState] = useState<string | null>(() => {
     try {
-      return localStorage.getItem('mood');
+      const stored = localStorage.getItem('mood');
+      return stored === 'abrumado' ? 'tranquilo' : stored;
     } catch {
       return null;
     }

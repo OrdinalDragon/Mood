@@ -168,7 +168,7 @@ export const Hero: React.FC = () => {
            alt="MOOD" 
            className="w-64 sm:w-80 mx-auto mb-6"
          />
-        <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-6xl mb-4 text-center">
+        <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-6xl mb-4 text-center titulo-animado-mood" style={{ textShadow: '0 0 12px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.1)' }}>
           Explorá tu ciudad
         </h1>
         <p className="mx-auto max-w-2xl text-lg text-slate-600 dark:text-slate-300 mb-8 text-center">
@@ -247,7 +247,7 @@ export const Hero: React.FC = () => {
 
               <Button 
                 onClick={handleSearch}
-                className="bg-primary hover:bg-primary/90 text-white rounded-xl px-8 h-12 md:h-auto font-bold transition-all hover:scale-105"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl px-8 h-12 md:h-auto font-bold transition-all hover:scale-105"
               >
                 Buscar Planes
               </Button>

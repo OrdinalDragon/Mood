@@ -46,6 +46,7 @@
     --radius-2xl: calc(var(--radius) * 1.8);
     --radius-3xl: calc(var(--radius) * 2.2);
     --radius-4xl: calc(var(--radius) * 2.6);
+    --animate-cambio-emocional: cambioEmocional 12s ease-in-out infinite;
 }
 
 :root {
@@ -120,8 +121,8 @@
 [data-mood="alegre"] {
     --background: oklch(0.99 0.04 95);
     --foreground: oklch(0.145 0 0);
-    --primary: oklch(0.75 0.18 95);
-    --primary-foreground: oklch(0.2 0 0);
+    --primary: #FFD000;
+    --primary-foreground: #1A1A1A;
     --muted: oklch(0.95 0.03 95);
     --muted-foreground: oklch(0.6 0.02 95);
     --accent: oklch(0.8 0.1 95);
@@ -134,8 +135,8 @@
 [data-mood="triste"] {
     --background: oklch(0.97 0.02 260);
     --foreground: oklch(0.145 0 0);
-    --primary: oklch(0.52 0.14 260);
-    --primary-foreground: oklch(0.985 0 0);
+    --primary: #33A1FD;
+    --primary-foreground: #FFFFFF;
     --muted: oklch(0.93 0.02 260);
     --muted-foreground: oklch(0.55 0.02 260);
     --accent: oklch(0.68 0.1 260);
@@ -148,8 +149,8 @@
 [data-mood="enojado"] {
     --background: oklch(0.97 0.025 25);
     --foreground: oklch(0.145 0 0);
-    --primary: oklch(0.48 0.2 25);
-    --primary-foreground: oklch(0.985 0 0);
+    --primary: #FF4B4B;
+    --primary-foreground: #FFFFFF;
     --muted: oklch(0.93 0.025 25);
     --muted-foreground: oklch(0.55 0.025 25);
     --accent: oklch(0.6 0.16 25);
@@ -159,25 +160,25 @@
     --ring: var(--primary);
 }
 
-[data-mood="abrumado"] {
-    --background: oklch(0.97 0.025 40);
+[data-mood="tranquilo"] {
+    --background: oklch(0.98 0.025 145);
     --foreground: oklch(0.145 0 0);
-    --primary: oklch(0.55 0.16 40);
-    --primary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.93 0.02 40);
-    --muted-foreground: oklch(0.55 0.02 40);
-    --accent: oklch(0.68 0.12 40);
-    --accent-foreground: oklch(0.985 0 0);
-    --border: oklch(0.88 0.02 40);
-    --input: oklch(0.88 0.02 40);
+    --primary: #4CAF50;
+    --primary-foreground: #FFFFFF;
+    --muted: oklch(0.94 0.02 145);
+    --muted-foreground: oklch(0.55 0.02 145);
+    --accent: oklch(0.7 0.12 145);
+    --accent-foreground: #FFFFFF;
+    --border: oklch(0.88 0.025 145);
+    --input: oklch(0.88 0.025 145);
     --ring: var(--primary);
 }
 
 [data-mood="reservado"] {
     --background: oklch(0.97 0.02 285);
     --foreground: oklch(0.145 0 0);
-    --primary: oklch(0.5 0.16 285);
-    --primary-foreground: oklch(0.985 0 0);
+    --primary: #8A4FFF;
+    --primary-foreground: #FFFFFF;
     --muted: oklch(0.93 0.02 285);
     --muted-foreground: oklch(0.55 0.02 285);
     --accent: oklch(0.65 0.12 285);
@@ -193,8 +194,212 @@
     }
   body {
     @apply bg-background text-foreground;
+    transition: background-color 0.5s ease, color 0.5s ease;
     }
   html {
     @apply font-sans;
     }
+}
+
+@keyframes cambioEmocional {
+    0%, 100% { color: #FFD000; }
+    20%      { color: #4CAF50; }
+    40%      { color: #33A1FD; }
+    60%      { color: #FF4B4B; }
+    80%      { color: #8A4FFF; }
+}
+
+/* ============================================================
+   Título animado - ciclo de colores infinito
+   ============================================================ */
+.titulo-animado-mood {
+    animation: cambioEmocional 12s ease-in-out infinite;
+}
+
+/* Congelar el título en el color del mood seleccionado */
+[data-mood="alegre"] .titulo-animado-mood {
+    animation: none;
+    color: #FFD000;
+}
+[data-mood="tranquilo"] .titulo-animado-mood {
+    animation: none;
+    color: #4CAF50;
+}
+[data-mood="triste"] .titulo-animado-mood {
+    animation: none;
+    color: #33A1FD;
+}
+[data-mood="enojado"] .titulo-animado-mood {
+    animation: none;
+    color: #FF4B4B;
+}
+[data-mood="reservado"] .titulo-animado-mood {
+    animation: none;
+    color: #8A4FFF;
+}
+
+/* ============================================================
+   Botón mood activo - color específico + contraste asegurado
+   ============================================================ */
+[data-mood="alegre"] .btn-mood-active {
+    background-color: #FFD000 !important;
+    color: #1A1A1A !important;
+    border-color: #FFD000 !important;
+}
+[data-mood="tranquilo"] .btn-mood-active {
+    background-color: #4CAF50 !important;
+    color: #FFFFFF !important;
+    border-color: #4CAF50 !important;
+}
+[data-mood="triste"] .btn-mood-active {
+    background-color: #33A1FD !important;
+    color: #FFFFFF !important;
+    border-color: #33A1FD !important;
+}
+[data-mood="enojado"] .btn-mood-active {
+    background-color: #FF4B4B !important;
+    color: #FFFFFF !important;
+    border-color: #FF4B4B !important;
+}
+[data-mood="reservado"] .btn-mood-active {
+    background-color: #8A4FFF !important;
+    color: #FFFFFF !important;
+    border-color: #8A4FFF !important;
+}
+
+/* ============================================================
+   Navbar emoji mood - botón activo redondo con color específico
+   ============================================================ */
+[data-mood="alegre"] .emoji-btn-active {
+    background-color: #FFD000 !important;
+    color: #1A1A1A !important;
+}
+[data-mood="tranquilo"] .emoji-btn-active {
+    background-color: #4CAF50 !important;
+    color: #FFFFFF !important;
+}
+[data-mood="triste"] .emoji-btn-active {
+    background-color: #33A1FD !important;
+    color: #FFFFFF !important;
+}
+[data-mood="enojado"] .emoji-btn-active {
+    background-color: #FF4B4B !important;
+    color: #FFFFFF !important;
+}
+[data-mood="reservado"] .emoji-btn-active {
+    background-color: #8A4FFF !important;
+    color: #FFFFFF !important;
+}
+
+/* ============================================================
+   MODO OSCURO + MOOD - Colores desaturados, fondos con tinte, accesibles
+   ============================================================ */
+
+/*
+   Selectores compuestos html.dark[data-mood="..."] tienen mayor
+   especificidad que .dark o [data-mood] solos.
+   --background se mantiene oscuro pero con un matiz sutil del mood.
+   --primary usa colores pastel, --primary-foreground usa #121212.
+*/
+
+html.dark[data-mood="alegre"] {
+    --background: oklch(0.16 0.015 95);
+    --primary: #FFE066;
+    --primary-foreground: #121212;
+    --muted: oklch(0.20 0.01 95);
+}
+html.dark[data-mood="tranquilo"] {
+    --background: oklch(0.16 0.015 145);
+    --primary: #81C784;
+    --primary-foreground: #121212;
+    --muted: oklch(0.20 0.01 145);
+}
+html.dark[data-mood="triste"] {
+    --background: oklch(0.16 0.015 260);
+    --primary: #64B5F6;
+    --primary-foreground: #121212;
+    --muted: oklch(0.20 0.01 260);
+}
+html.dark[data-mood="enojado"] {
+    --background: oklch(0.16 0.015 25);
+    --primary: #E57373;
+    --primary-foreground: #121212;
+    --muted: oklch(0.20 0.01 25);
+}
+html.dark[data-mood="reservado"] {
+    --background: oklch(0.16 0.015 285);
+    --primary: #B388FF;
+    --primary-foreground: #121212;
+    --muted: oklch(0.20 0.01 285);
+}
+
+/* Título congelado en versión desaturada */
+html.dark[data-mood="alegre"] .titulo-animado-mood {
+    animation: none;
+    color: #FFE066;
+}
+html.dark[data-mood="tranquilo"] .titulo-animado-mood {
+    animation: none;
+    color: #81C784;
+}
+html.dark[data-mood="triste"] .titulo-animado-mood {
+    animation: none;
+    color: #64B5F6;
+}
+html.dark[data-mood="enojado"] .titulo-animado-mood {
+    animation: none;
+    color: #E57373;
+}
+html.dark[data-mood="reservado"] .titulo-animado-mood {
+    animation: none;
+    color: #B388FF;
+}
+
+/* Botón activo - pastel + texto oscuro #121212 */
+html.dark[data-mood="alegre"] .btn-mood-active {
+    background-color: #FFE066 !important;
+    color: #121212 !important;
+    border-color: #FFE066 !important;
+}
+html.dark[data-mood="tranquilo"] .btn-mood-active {
+    background-color: #81C784 !important;
+    color: #121212 !important;
+    border-color: #81C784 !important;
+}
+html.dark[data-mood="triste"] .btn-mood-active {
+    background-color: #64B5F6 !important;
+    color: #121212 !important;
+    border-color: #64B5F6 !important;
+}
+html.dark[data-mood="enojado"] .btn-mood-active {
+    background-color: #E57373 !important;
+    color: #121212 !important;
+    border-color: #E57373 !important;
+}
+html.dark[data-mood="reservado"] .btn-mood-active {
+    background-color: #B388FF !important;
+    color: #121212 !important;
+    border-color: #B388FF !important;
+}
+
+/* Emoji mood navbar - pastel + texto oscuro #121212 */
+html.dark[data-mood="alegre"] .emoji-btn-active {
+    background-color: #FFE066 !important;
+    color: #121212 !important;
+}
+html.dark[data-mood="tranquilo"] .emoji-btn-active {
+    background-color: #81C784 !important;
+    color: #121212 !important;
+}
+html.dark[data-mood="triste"] .emoji-btn-active {
+    background-color: #64B5F6 !important;
+    color: #121212 !important;
+}
+html.dark[data-mood="enojado"] .emoji-btn-active {
+    background-color: #E57373 !important;
+    color: #121212 !important;
+}
+html.dark[data-mood="reservado"] .emoji-btn-active {
+    background-color: #B388FF !important;
+    color: #121212 !important;
 }

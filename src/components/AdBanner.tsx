@@ -34,7 +34,7 @@ export const AdBanner: React.FC<AdBannerProps> = ({
   const isSidebar = variant === 'sidebar';
   const content = (
     <Card className={`overflow-hidden ${isSidebar ? 'w-full max-w-[300px]' : 'w-full'}`}>
-      <div className={`relative ${isSidebar ? 'h-40' : 'h-48'} bg-gradient-to-br from-blue-600 to-blue-800`}>
+      <div className={`relative ${isSidebar ? 'h-40' : 'h-48'} bg-gradient-to-br from-primary to-primary/80`}>
         <img 
           src={image}
           alt={title}
@@ -44,16 +44,16 @@ export const AdBanner: React.FC<AdBannerProps> = ({
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
         
         {badge && (
-          <Badge className="absolute top-2 left-2 bg-blue-500 text-white border-0 text-xs">
+          <Badge className="absolute top-2 left-2 bg-primary text-primary-foreground border-0 text-xs">
             {badge}
           </Badge>
         )}
         
         <div className="absolute bottom-0 left-0 right-0 p-3">
-          <p className="text-white/80 text-xs font-medium uppercase tracking-wide">
+          <p className="text-primary-foreground/80 text-xs font-medium uppercase tracking-wide">
             {subtitle}
           </p>
-          <h3 className={`font-bold text-white ${isSidebar ? 'text-base' : 'text-lg'}`}>
+          <h3 className={`font-bold text-primary-foreground ${isSidebar ? 'text-base' : 'text-lg'}`}>
             {title}
           </h3>
         </div>
@@ -61,19 +61,19 @@ export const AdBanner: React.FC<AdBannerProps> = ({
       
       <CardContent className="p-3">
         {description && (
-          <p className="text-sm text-slate-600 mb-3 line-clamp-3">{description}</p>
+          <p className="text-sm text-muted-foreground mb-3 line-clamp-3">{description}</p>
         )}
         
         {date && (
-          <div className="flex items-center gap-2 text-xs text-slate-500 mb-1">
-            <Calendar size={12} className="text-blue-500" />
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+            <Calendar size={12} className="text-primary" />
             <span>{format(date, "d 'de' MMMM", { locale: es })}</span>
           </div>
         )}
         
         {location && (
-          <div className="flex items-center gap-2 text-xs text-slate-500 mb-3">
-            <MapPin size={12} className="text-blue-500" />
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
+            <MapPin size={12} className="text-primary" />
             <span>{location}</span>
           </div>
         )}
@@ -81,12 +81,12 @@ export const AdBanner: React.FC<AdBannerProps> = ({
         {ctaLink ? (
           <Link 
             to={ctaLink}
-            className="block w-full py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium text-center rounded-lg transition-colors"
+            className="block w-full py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium text-center rounded-lg transition-colors"
           >
             {ctaText}
           </Link>
         ) : (
-          <span className="block w-full py-2 bg-blue-600 text-white text-sm font-medium text-center rounded-lg">
+          <span className="block w-full py-2 bg-primary text-primary-foreground text-sm font-medium text-center rounded-lg">
             {ctaText}
           </span>
         )}

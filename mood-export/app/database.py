@@ -1,33 +1,26 @@
 # ============================================================
-# app/database.py - Conexión a Base de Datos
+# app/database.py - Conexión a MongoDB
 # ============================================================
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from motor.motor_asyncio import AsyncIOMotorClient
+from beanie import init_beanie
 import os
 
-# URL de conexión a MariaDB
-DB_HOST = os.getenv("DB_HOST", "db")
-DB_PORT = os.getenv("DB_PORT", "3306")
-DB_USER = os.getenv("DB_USER", "mood_user")
-DB_PASSWORD = os.getenv("DB_PASSWORD", "mood_password")
-DB_NAME = os.getenv("DB_NAME", "mood_db")
+MONGO_URI = os.getenv("MONGO_URI", "mongodb://mood_user:mood_password@mongo:27017/mood_db?authSource=admin")
+MONGO_DB_NAME = os.getenv("MONGO_DB_NAME", "mood_db")
 
-DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+from typing import Optional
 
-# Engine de SQLAlchemy
-engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+client: Optional[AsyncIOMotorClient] = None
 
-# SessionLocal
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Base para modelos
-Base = declarative_base()
+async def init_db():
+    global client
+    client = AsyncIOMotorClient(MONGO_URI)
+    from app.models import Event, User
+    await init_beanie(database=client[MONGO_DB_NAME], document_models=[Event, User])
 
-def get_db():
-    """Dependency: obtener sesión de base de datos."""
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+
+async def close_db():
+    global client
+    if client:
+        client.close()

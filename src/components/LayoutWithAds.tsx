@@ -48,37 +48,37 @@ export const LayoutWithAds: React.FC<LayoutWithAdsProps> = ({ children }) => {
             />
           </Link>
           
-          <div className="bg-gradient-to-br from-primary to-accent rounded-xl p-4 text-white">
+          <div className="bg-gradient-to-br from-primary to-accent rounded-xl p-4 text-primary-foreground">
             <div className="flex items-center gap-2 mb-2">
-              <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-primary/20 rounded-lg flex items-center justify-center">
                 <Clock className="w-4 h-4" />
               </div>
               <span className="text-sm font-semibold">Martes 9 de Junio</span>
             </div>
-            <p className="text-xs text-white/80 mb-2">
+            <p className="text-xs text-primary-foreground/80 mb-2">
               Auditorio Pampa Energía · Av. Corrientes 515, CABA
             </p>
             <div className="space-y-1 mb-2">
               {expoDetails.map((d) => (
-                <div key={d.label} className="flex items-center gap-2 text-xs text-white/90">
-                  <span className="w-2 h-2 bg-white/40 rounded-full"></span>
+                <div key={d.label} className="flex items-center gap-2 text-xs text-primary-foreground/90">
+                  <span className="w-2 h-2 bg-primary/40 rounded-full"></span>
                   <span className="font-medium">{d.label}:</span> {d.time}
                 </div>
               ))}
             </div>
-            <button className="mt-1 w-full py-2 bg-white text-primary text-sm font-semibold rounded-lg hover:bg-primary/5 transition-colors">
+            <button className="mt-1 w-full py-2 bg-primary/10 dark:bg-primary/20 text-primary font-semibold rounded-lg hover:bg-primary/20 transition-colors">
               ¡Te esperamos!
             </button>
           </div>
 
-          <div className="bg-slate-100 rounded-xl p-4">
-            <h4 className="font-semibold text-slate-900 dark:text-white text-sm mb-3">📍 ¿Cómo llegar?</h4>
+          <div className="bg-muted rounded-xl p-4">
+            <h4 className="font-semibold text-card-foreground text-sm mb-3">📍 ¿Cómo llegar?</h4>
             <ul className="space-y-1.5">
               {nearbyStops.map((stop) => (
-                <li key={stop.name} className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+                <li key={stop.name} className="flex items-center gap-2 text-xs text-muted-foreground">
                   <MapPin size={12} className="text-primary flex-shrink-0" />
                   <span>{stop.name}</span>
-                  <span className="text-slate-400 dark:text-slate-500 ml-auto">{stop.line}</span>
+                  <span className="text-muted-foreground/60 ml-auto">{stop.line}</span>
                 </li>
               ))}
             </ul>
@@ -105,21 +105,21 @@ export const LayoutWithAds: React.FC<LayoutWithAdsProps> = ({ children }) => {
           </Link>
 
           <Link to="/map?category=cultural" className="block">
-            <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl p-4 text-white hover:opacity-90 transition-opacity">
+            <div className="bg-gradient-to-br from-primary to-accent rounded-xl p-4 text-primary-foreground hover:opacity-90 transition-opacity">
               <div className="flex items-center gap-2 mb-2">
                 <MapPin className="w-5 h-5" />
-                <span className="text-xs bg-white/20 px-2 py-0.5 rounded">GRATIS</span>
+                <span className="text-xs bg-primary/20 px-2 py-0.5 rounded">GRATIS</span>
               </div>
               <h4 className="font-bold text-sm mb-1">Explorá eventos culturales</h4>
-              <p className="text-xs text-white/80 mb-2">Más de 200 eventos gratis en toda la ciudad</p>
-              <span className="block w-full py-1.5 bg-white text-emerald-600 text-xs font-semibold rounded-lg text-center">
+              <p className="text-xs text-primary-foreground/80 mb-2">Más de 200 eventos gratis en toda la ciudad</p>
+              <span className="block w-full py-1.5 bg-primary text-primary-foreground text-xs font-semibold rounded-lg text-center">
                 Ver eventos
               </span>
             </div>
           </Link>
 
-          <div className="bg-slate-100 rounded-xl p-3">
-            <h4 className="font-semibold text-slate-900 dark:text-white text-sm mb-2">✨ Funcionalidades MOOD</h4>
+          <div className="bg-muted rounded-xl p-3">
+            <h4 className="font-semibold text-card-foreground text-sm mb-2">✨ Funcionalidades MOOD</h4>
             <div className="space-y-1.5">
               {[
                 { title: 'Mapa interactivo', desc: 'Explorá eventos cerca de ti' },
@@ -127,10 +127,10 @@ export const LayoutWithAds: React.FC<LayoutWithAdsProps> = ({ children }) => {
                 { title: 'Cobertura nacional', desc: 'Todas las provincias argentinas' }
               ].map((f) => (
                 <Link key={f.title} to="/map" className="block">
-                  <div className="flex items-center gap-2 bg-white rounded-lg p-2 hover:bg-primary/5 transition-colors">
+                  <div className="flex items-center gap-2 bg-card rounded-lg p-2 hover:bg-primary/5 transition-colors">
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-slate-900 dark:text-white truncate">{f.title}</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">{f.desc}</p>
+                      <p className="text-xs font-medium text-card-foreground truncate">{f.title}</p>
+                      <p className="text-xs text-muted-foreground">{f.desc}</p>
                     </div>
                   </div>
                 </Link>
@@ -138,27 +138,27 @@ export const LayoutWithAds: React.FC<LayoutWithAdsProps> = ({ children }) => {
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl p-4 text-white">
+          <div className="bg-gradient-to-br from-primary to-primary/80 rounded-xl p-4 text-primary-foreground">
             <div className="flex items-center gap-2 mb-2">
               <span className="text-lg">🎯</span>
               <div>
                 <p className="font-bold text-sm">Proyecto MOOD</p>
-                <p className="text-xs text-white/80">Martes 9 de Junio</p>
+                <p className="text-xs text-primary-foreground/80">Martes 9 de Junio</p>
               </div>
             </div>
-              <p className="text-xs text-white/80 mt-1 mb-2">
+              <p className="text-xs text-primary-foreground/80 mt-1 mb-2">
               Presentación en el Auditorio Pampa Energía. De 14 a 17 hs con demos y networking.
             </p>
             <div className="flex gap-1.5 mt-2">
               <Link
                 to="/event/exposicion-del-proyecto-mood---sesio"
-                className="flex-1 text-xs bg-white/20 hover:bg-white/30 rounded px-2 py-1 text-center transition-colors"
+                className="flex-1 text-xs bg-primary/20 hover:bg-primary/30 rounded px-2 py-1 text-center transition-colors"
               >
                 Exposición
               </Link>
               <Link
                 to="/event/mood-networking-y-demos---junio-2026"
-                className="flex-1 text-xs bg-white/20 hover:bg-white/30 rounded px-2 py-1 text-center transition-colors"
+                className="flex-1 text-xs bg-primary/20 hover:bg-primary/30 rounded px-2 py-1 text-center transition-colors"
               >
                 Networking
               </Link>

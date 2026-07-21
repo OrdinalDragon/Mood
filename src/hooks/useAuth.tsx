@@ -6,7 +6,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { UserProfile } from '../types';
-import { login as apiLogin, register as apiRegister, logout as apiLogout, getMe } from '../lib/api';
+import { login as apiLogin, register as apiRegister, logout as apiLogout, getMe, googleLogin as apiGoogleLogin, sendVerification as apiSendVerification, resendVerification as apiResendVerification, forgotPassword as apiForgotPassword, resetPassword as apiResetPassword } from '../lib/api';
 
 interface AuthUser {
   uid: string;
@@ -25,7 +25,12 @@ interface AuthContextType {
   loading: boolean;
   isAdmin: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, displayName?: string) => Promise<void>;
+  register: (email: string, password: string, displayName?: string) => Promise<{ message: string }>;
+  googleLogin: (credential: string) => Promise<void>;
+  sendVerification: () => Promise<void>;
+  resendVerification: (email: string) => Promise<void>;
+  forgotPassword: (email: string) => Promise<void>;
+  resetPassword: (token: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -35,7 +40,12 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   isAdmin: false,
   login: async () => {},
-  register: async () => {},
+  register: async () => ({} as { message: string }),
+  googleLogin: async () => {},
+  sendVerification: async () => {},
+  resendVerification: async () => {},
+  forgotPassword: async () => {},
+  resetPassword: async () => {},
   logout: () => {},
 });
 
@@ -66,8 +76,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const register = async (email: string, password: string, displayName?: string) => {
-    await apiRegister(email, password, displayName || '');
-    await login(email, password);
+    return apiRegister(email, password, displayName || '');
+  };
+
+  const sendVerification = async () => {
+    await apiSendVerification();
+  };
+
+  const resendVerification = async (email: string) => {
+    await apiResendVerification(email);
+  };
+
+  const forgotPassword = async (email: string) => {
+    await apiForgotPassword(email);
+  };
+
+  const resetPassword = async (token: string, password: string) => {
+    await apiResetPassword(token, password);
+  };
+
+  const googleLogin = async (credential: string) => {
+    await apiGoogleLogin(credential);
+    const userData = await getMe();
+    setUser(userData as unknown as AuthUser);
   };
 
   const logout = () => {
@@ -78,7 +109,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isAdmin = user?.role === 'admin' || user?.email === 'schernetzki96@gmail.com';
 
   return (
-    <AuthContext.Provider value={{ user, profile: user as unknown as UserProfile, loading, isAdmin, login, register, logout }}>
+    <AuthContext.Provider value={{ user, profile: user as unknown as UserProfile, loading, isAdmin, login, register, googleLogin, sendVerification, resendVerification, forgotPassword, resetPassword, logout }}>
       {children}
     </AuthContext.Provider>
   );

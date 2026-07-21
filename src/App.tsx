@@ -10,6 +10,9 @@
 import { BrowserRouter as Router, Routes, Route, Link, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { LocateFixed, MapPin, Calendar } from 'lucide-react';
 
+// Google OAuth
+import { GoogleOAuthProvider } from '@react-oauth/google';
+
 // Context de autenticación
 import { AuthProvider } from './hooks/useAuth';
 import { MoodProvider } from './contexts/MoodContext';
@@ -25,12 +28,18 @@ import { EventCalendar } from './components/EventCalendar';
 import { EventDetailPage } from './pages/EventDetailPage';
 import { GiveawaysPage } from './pages/GiveawaysPage';
 import { TerminosYCondiciones } from './pages/TerminosYCondiciones';
+import { VerifyEmail } from './pages/VerifyEmail';
+import { ResetPassword } from './pages/ResetPassword';
 import { ContactPage } from './pages/ContactPage';
+import { CategoriesPage } from './pages/CategoriesPage';
+import { AboutMoodsPage } from './pages/AboutMoodsPage';
 import { EventCard } from '@/components/EventCard';
 import { LayoutWithAds } from './components/LayoutWithAds';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 // Notificaciones toast
 import { Toaster } from 'sonner';
+import { GeminiChat } from './components/GeminiChat';
 
 // React hooks
 import { useEffect, useState, useRef } from 'react';
@@ -68,7 +77,7 @@ function HomePage() {
     alegre: 'Eventos vibrantes y llenos de energía',
     triste: 'Planes tranquilos para consentirte',
     enojado: 'Actividades para liberar tensiones',
-    abrumado: 'Experiencias relajadas y sin estrés',
+    tranquilo: 'Planes serenos para reconectar con vos mismo',
     reservado: 'Propuestas íntimas y sin multitudes',
   };
 
@@ -134,7 +143,7 @@ function HomePage() {
         className={`
           relative flex flex-col items-center gap-4 p-8 rounded-2xl border-2 transition-all cursor-pointer
           ${isActive
-            ? 'bg-primary text-primary-foreground border-primary shadow-lg scale-105'
+            ? 'btn-mood-active shadow-lg scale-105'
             : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-primary/50 hover:text-primary hover:shadow-md hover:-translate-y-1'
           }
         `}
@@ -203,9 +212,12 @@ function HomePage() {
             </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {events.slice(0, 4).map((event) => (
-                <EventCard key={event.id} event={event} />
-              ))}
+              {events
+                .filter(event => !contextMood || (event.moods && event.moods.includes(contextMood)))
+                .slice(0, 4)
+                .map((event) => (
+                  <EventCard key={event.id} event={event} />
+                ))}
             </div>
           </div>
           
@@ -266,7 +278,7 @@ function MapPage() {
   useEffect(() => {
     if (urlSyncDone.current) return;
     const urlMood = searchParams.get('mood');
-    const validMoods = ['alegre', 'triste', 'enojado', 'abrumado', 'reservado'];
+    const validMoods = ['alegre', 'triste', 'enojado', 'tranquilo', 'reservado'];
     if (urlMood && validMoods.includes(urlMood)) {
       urlSyncDone.current = true;
       setContextMood(urlMood);
@@ -599,7 +611,7 @@ function MapPage() {
                       }`}
                     >
                       <div className="flex items-start gap-2 mb-1.5">
-                        <Badge className={`text-[10px] px-1.5 py-0 ${selectedEvent?.id === event.id ? 'bg-primary text-white' : 'bg-primary/15 text-primary'}`}>
+                        <Badge className={`text-[10px] px-1.5 py-0 ${selectedEvent?.id === event.id ? 'bg-primary text-primary-foreground' : 'bg-primary/15 text-primary'}`}>
                           {categoryLabels[event.category] || event.category}
                         </Badge>
                         {event.is_free && (
@@ -735,7 +747,9 @@ function MapPage() {
  */
 export default function App() {
   return (
-    // AuthProvider -> proporciona contexto de autenticación
+    // GoogleOAuthProvider -> Google Sign-In
+    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
+    {/* AuthProvider -> proporciona contexto de autenticación */}
     <AuthProvider>
       <MoodProvider>
       <ThemeProvider>
@@ -757,8 +771,12 @@ export default function App() {
             <Route path="/submit" element={<EventForm />} />
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/giveaways" element={<GiveawaysPage />} />
+            <Route path="/categories" element={<CategoriesPage />} />
+            <Route path="/about-moods" element={<AboutMoodsPage />} />
             <Route path="/contact" element={<ContactPage />} />
             <Route path="/terminos-y-condiciones" element={<TerminosYCondiciones />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             {/* Ruta catchall para 404 */}
             <Route path="*" element={<div className="flex items-center justify-center h-96 text-2xl font-bold">404 - Página no encontrada</div>} />
           </Routes>
@@ -785,7 +803,8 @@ export default function App() {
                 <ul className="space-y-2 text-slate-400 text-sm">
                   <li><Link to="/map" className="hover:text-white transition-colors">Mapa de Eventos</Link></li>
                   <li><Link to="/calendar" className="hover:text-white transition-colors">Calendario</Link></li>
-                  <li><a href="#" className="hover:text-white transition-colors">Categorías</a></li>
+                  <li><Link to="/categories" className="hover:text-white transition-colors">Categorías</Link></li>
+                  <li><Link to="/about-moods" className="hover:text-white transition-colors">Sobre los Moods</Link></li>
                 </ul>
               </div>
               
@@ -809,9 +828,11 @@ export default function App() {
         
         {/* Toaster para notificaciones */}
         <Toaster position="top-center" richColors />
+        <GeminiChat />
       </Router>
       </ThemeProvider>
       </MoodProvider>
     </AuthProvider>
+    </GoogleOAuthProvider>
   );
 }

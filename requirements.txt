@@ -1,9 +1,13 @@
 fastapi
 uvicorn
-sqlalchemy
-pymysql
 python-dotenv
 pydantic
 cryptography
 PyJWT
 python-multipart
+beanie
+motor
+google-auth
+google-auth-oauthlib
+pillow
+google-generativeai

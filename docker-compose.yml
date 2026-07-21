@@ -2,7 +2,7 @@
 # docker-compose.yml - MOOD Project
 # ============================================================
 # Servicios:
-#   - db: MariaDB (base de datos)
+#   - mongo: MongoDB (base de datos)
 #   - backend: FastAPI (API REST)
 #   - frontend: React + Nginx (app web)
 #   - nginx: Reverse proxy
@@ -20,23 +20,22 @@ version: '3.8'
 
 services:
   # ============================================================
-  # MARIADB - Base de datos
+  # MONGODB - Base de datos
   # ============================================================
-  db:
-    image: mariadb:10.11
-    container_name: mood_db
+  mongo:
+    image: mongo:7
+    container_name: mood_mongo
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-mood_db}
-      MYSQL_USER: ${MYSQL_USER:-mood_user}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-mood_password}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:-mood_user}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-mood_password}
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE:-mood_db}
     ports:
-      - "${DB_PORT:-3306}:3306"
+      - "27017:27017"
     volumes:
-      - mariadb_data:/var/lib/mysql
+      - mongodb_data:/data/db
     healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      test: echo 'db.runCommand("ping").ok' | mongosh --quiet
       interval: 10s
       timeout: 5s
       retries: 5
@@ -54,17 +53,22 @@ services:
     container_name: mood_backend
     restart: always
     environment:
-      DB_HOST: db
-      DB_PORT: 3306
-      DB_USER: ${MYSQL_USER:-mood_user}
-      DB_PASSWORD: ${MYSQL_PASSWORD:-mood_password}
-      DB_NAME: ${MYSQL_DATABASE:-mood_db}
+      MONGO_URI: ${MONGO_URI:-mongodb://mood_user:mood_password@mongo:27017/mood_db?authSource=admin}
+      MONGO_DB_NAME: ${MONGO_DB_NAME:-mood_db}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      SMTP_FROM: ${SMTP_FROM}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
     ports:
       - "8000:8000"
     volumes:
-      - ./app:/app/app:ro  # Montar código para desarrollo
+      - ./app:/app/app:ro
     depends_on:
-      db:
+      mongo:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
@@ -82,6 +86,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.frontend
+      args:
+        VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+        VITE_FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
     container_name: mood_frontend
     restart: always
     environment:
@@ -129,7 +136,7 @@ services:
 # VOLÚMENES - Datos persistentes
 # ============================================================
 volumes:
-  mariadb_data:
+  mongodb_data:
     driver: local
 
 # ============================================================

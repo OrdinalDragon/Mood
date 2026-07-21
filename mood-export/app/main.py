@@ -1,18 +1,25 @@
 # ============================================================
 # app/main.py - Aplicación FastAPI Principal
 # ============================================================
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.database import engine, Base
+from app.database import init_db, close_db
 from app.routes import events
 
-# Crear las tablas si no existen
-Base.metadata.create_all(bind=engine)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await init_db()
+    yield
+    await close_db()
+
 
 app = FastAPI(
     title="MOOD API",
     description="API para explorá tu ciudad - Gestor de eventos",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan,
 )
 
 # CORS middleware
@@ -27,10 +34,12 @@ app.add_middleware(
 # Incluir routers
 app.include_router(events.router)
 
+
 @app.get("/")
-def root():
+async def root():
     return {"message": "MOOD API is running", "docs": "/docs"}
 
+
 @app.get("/health")
-def health_check():
+async def health_check():
     return {"status": "healthy"}

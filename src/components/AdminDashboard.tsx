@@ -14,10 +14,10 @@
 import React, { useEffect, useState } from 'react';
 
 // API
-import { getPendingEvents, approveEvent, rejectEvent, deleteEvent, updateEvent, uploadImage } from '../lib/api';
+import { getPendingEvents, approveEvent, rejectEvent, deleteEvent, updateEvent, uploadImage, getUsers, updateUserRole } from '../lib/api';
 
 // Tipos
-import { Event } from '../types';
+import { Event, UserAdmin } from '../types';
 
 // UI Components
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,7 +30,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 
 // Iconos
-import { Check, X, Trash2, ExternalLink, Pencil, MapPin, Upload, ImagePlus } from 'lucide-react';
+import { Check, X, Trash2, ExternalLink, Pencil, MapPin, Upload, ImagePlus, Users, Calendar } from 'lucide-react';
 
 // Utils
 import { format } from 'date-fns';
@@ -52,17 +52,33 @@ import { toast } from 'sonner';
  * 
  * Solo usuarios con isAdmin=true ven este componente
  */
+const ROLE_LABELS: Record<string, string> = {
+  admin: 'Admin',
+  moderator: 'Moderador',
+  user: 'Usuario',
+};
+
+const ROLE_COLORS: Record<string, string> = {
+  admin: 'bg-red-100 text-red-700 border-red-200',
+  moderator: 'bg-blue-100 text-blue-700 border-blue-200',
+  user: 'bg-slate-100 text-slate-600 border-slate-200',
+};
+
 export const AdminDashboard: React.FC = () => {
   // ---- ESTADOS ----
-  // Lista de eventos pendientes
+  const [tab, setTab] = useState<'events' | 'users'>('events');
+
+  // Eventos
   const [pendingEvents, setPendingEvents] = useState<Event[]>([]);
-  // Loading inicial
   const [loading, setLoading] = useState(true);
-  // Modal de edición
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [editForm, setEditForm] = useState<Partial<Event>>({});
   const [dialogOpen, setDialogOpen] = useState(false);
 
+  // Usuarios
+  const [users, setUsers] = useState<UserAdmin[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [updatingUid, setUpdatingUid] = useState<string | null>(null);
 
   // ---- EFFECT: CARGAR EVENTOS ----
   useEffect(() => {
@@ -79,6 +95,23 @@ export const AdminDashboard: React.FC = () => {
 
     loadEvents();
   }, []);  // [] → solo una vez
+
+  // ---- CARGAR USUARIOS ----
+  const loadUsers = async () => {
+    setUsersLoading(true);
+    try {
+      const data = await getUsers();
+      setUsers(data);
+    } catch (error) {
+      toast.error('Error al cargar usuarios');
+    } finally {
+      setUsersLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (tab === 'users') loadUsers();
+  }, [tab]);
 
 
   // ---- HANDLERS ----
@@ -185,6 +218,20 @@ export const AdminDashboard: React.FC = () => {
   };
 
 
+  // ---- HANDLER CAMBIAR ROL ----
+  const handleRoleChange = async (uid: string, newRole: string) => {
+    setUpdatingUid(uid);
+    try {
+      await updateUserRole(uid, newRole);
+      setUsers(prev => prev.map(u => u.uid === uid ? { ...u, role: newRole as any } : u));
+      toast.success(`Rol actualizado a ${ROLE_LABELS[newRole] || newRole}`);
+    } catch (error) {
+      toast.error('Error al actualizar rol');
+    } finally {
+      setUpdatingUid(null);
+    }
+  };
+
   // ---- RENDER ----
   return (
     <div className="container mx-auto py-10 px-4">
@@ -196,23 +243,51 @@ export const AdminDashboard: React.FC = () => {
             Panel de Administración
           </h1>
           <p className="text-slate-500 dark:text-slate-400">
-            Revisá y gestioná los eventos subidos por la comunidad.
+            Gestioná eventos y usuarios de la plataforma.
           </p>
         </div>
-        {/* Badge con contador */}
-        <Badge variant="outline" className="text-lg py-1 px-4">
-          {pendingEvents.length} Pendientes
-        </Badge>
       </div>
 
-      {/* ---- ESTADO: LOADING ---- */}
+      {/* TABS */}
+      <div className="flex gap-2 mb-8 border-b border-slate-200 dark:border-slate-700 pb-2">
+        <button
+          onClick={() => setTab('events')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${
+            tab === 'events'
+              ? 'bg-primary/10 text-primary border-b-2 border-primary'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+          }`}
+        >
+          <Calendar size={16} />
+          Eventos pendientes
+          {pendingEvents.length > 0 && (
+            <Badge className="ml-1 bg-primary text-primary-foreground text-xs px-1.5 py-0">{pendingEvents.length}</Badge>
+          )}
+        </button>
+        <button
+          onClick={() => setTab('users')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${
+            tab === 'users'
+              ? 'bg-primary/10 text-primary border-b-2 border-primary'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+          }`}
+        >
+          <Users size={16} />
+          Usuarios
+          {users.length > 0 && (
+            <Badge className="ml-1 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs px-1.5 py-0">{users.length}</Badge>
+          )}
+        </button>
+      </div>
+
+      {/* ---- TAB: EVENTOS ---- */}
+      {tab === 'events' && (
+        <>
       {loading ? (
         <div className="flex justify-center py-20">
-          {/* Spinner */}
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
       
-      // ---- ESTADO: SIN EVENTOS ----
       ) : pendingEvents.length === 0 ? (
         <Card className="text-center py-20 bg-slate-50 border-dashed">
           <CardContent>
@@ -222,7 +297,6 @@ export const AdminDashboard: React.FC = () => {
           </CardContent>
         </Card>
       
-      // ---- ESTADO: LISTA DE EVENTOS ----
       ) : (
         <div className="grid grid-cols-1 gap-6">
           {pendingEvents.map((event) => (
@@ -230,10 +304,8 @@ export const AdminDashboard: React.FC = () => {
               key={event.id} 
               className="overflow-hidden border-slate-200 hover:shadow-md transition-shadow"
             >
-              {/* Layout: imagen + contenido */}
               <div className="flex flex-col md:flex-row">
                 
-                {/* IMAGEN */}
                 <div className="w-full md:w-64 h-48 md:h-auto bg-slate-100">
                   {event.image_url ? (
                     <img src={event.image_url} alt={event.title} className="w-full h-full object-cover" />
@@ -249,9 +321,7 @@ export const AdminDashboard: React.FC = () => {
                   )}
                 </div>
 
-                {/* CONTENIDO */}
                 <div className="flex-1 p-6">
-                  {/* Header del card */}
                   <div className="flex justify-between items-start mb-2">
                     <div>
                       <Badge className="mb-2 bg-primary/15 text-primary hover:bg-primary/15">
@@ -261,18 +331,15 @@ export const AdminDashboard: React.FC = () => {
                         {event.title}
                       </h3>
                     </div>
-                    {/* Fecha */}
                     <div className="text-right text-sm text-slate-500 dark:text-slate-400">
                       {format(new Date(event.date), "PPP", { locale: es })}
                     </div>
                   </div>
                   
-                  {/* Descripción (max 2 líneas) */}
                   <p className="text-slate-600 dark:text-slate-300 mb-4 line-clamp-2">
                     {event.description}
                   </p>
                   
-                  {/* Metadata */}
                   <div className="flex flex-wrap gap-4 text-sm text-slate-500 dark:text-slate-400 mb-6">
                     <div className="flex items-center gap-1">
                       <span className="font-semibold">Ubicación:</span> 
@@ -284,9 +351,7 @@ export const AdminDashboard: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* BOTONES DE ACCIÓN */}
                   <div className="flex gap-3">
-                    {/* Editar */}
                     <Button 
                       onClick={() => openEditDialog(event)}
                       variant="outline"
@@ -295,7 +360,6 @@ export const AdminDashboard: React.FC = () => {
                       <Pencil size={18} className="mr-2" /> 
                       Editar
                     </Button>
-                    {/* Aprobar */}
                     <Button 
                       onClick={() => handleApprove(event.id)}
                       className="bg-green-600 hover:bg-green-700 text-white flex-1 md:flex-none"
@@ -303,7 +367,6 @@ export const AdminDashboard: React.FC = () => {
                       <Check size={18} className="mr-2" /> 
                       Aprobar
                     </Button>
-                    {/* Rechazar */}
                     <Button 
                       onClick={() => handleReject(event.id)}
                       variant="outline" 
@@ -312,7 +375,6 @@ export const AdminDashboard: React.FC = () => {
                       <X size={18} className="mr-2" /> 
                       Rechazar
                     </Button>
-                    {/* Eliminar */}
                     <Button 
                       onClick={() => handleDelete(event.id)}
                       variant="ghost" 
@@ -326,6 +388,73 @@ export const AdminDashboard: React.FC = () => {
             </Card>
           ))}
         </div>
+      )}
+        </>
+      )}
+
+      {/* ---- TAB: USUARIOS ---- */}
+      {tab === 'users' && (
+        <>
+        {usersLoading ? (
+          <div className="flex justify-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          </div>
+        ) : (
+          <Card>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+                      <th className="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-300">Email</th>
+                      <th className="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-300">Nombre</th>
+                      <th className="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-300">Rol</th>
+                      <th className="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-300">Registro</th>
+                      <th className="text-center px-4 py-3 font-semibold text-slate-600 dark:text-slate-300">Verificado</th>
+                      <th className="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-300">Auth</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users.map((user) => (
+                      <tr key={user.uid} className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/30">
+                        <td className="px-4 py-3 text-slate-900 dark:text-white">{user.email}</td>
+                        <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{user.display_name || '—'}</td>
+                        <td className="px-4 py-3">
+                          <Select
+                            value={user.role}
+                            onValueChange={(v) => handleRoleChange(user.uid, v)}
+                            disabled={updatingUid === user.uid}
+                          >
+                            <SelectTrigger className={`w-36 h-8 text-xs font-medium border rounded-full ${ROLE_COLORS[user.role] || ''}`}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="admin">Admin</SelectItem>
+                              <SelectItem value="moderator">Moderador</SelectItem>
+                              <SelectItem value="user">Usuario</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </td>
+                        <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-xs">
+                          {user.created_at ? format(new Date(user.created_at), 'P', { locale: es }) : '—'}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {user.email_verified === '1' ? (
+                            <Badge className="bg-green-100 text-green-700 border-green-200 text-xs">Sí</Badge>
+                          ) : (
+                            <Badge className="bg-red-100 text-red-700 border-red-200 text-xs">No</Badge>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-xs capitalize">{user.auth_provider}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        </>
       )}
 
       {/* MODAL DE EDICIÓN */}
@@ -587,7 +716,7 @@ export const AdminDashboard: React.FC = () => {
                 <Button variant="outline" onClick={() => setDialogOpen(false)}>
                   Cancelar
                 </Button>
-                <Button onClick={handleSaveEdit} className="bg-primary text-white">
+                <Button onClick={handleSaveEdit} className="bg-primary text-primary-foreground">
                   Guardar Cambios
                 </Button>
               </div>

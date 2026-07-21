@@ -42,8 +42,9 @@ export type EventStatus =
  * Coincide con UserRole en backend/schemas/__init__.py
  */
 export type UserRole = 
-  | 'admin'  // Administrador (puede aprobar eventos)
-  | 'user';  // Usuario normal
+  | 'admin'      // Administrador (puede aprobar eventos)
+  | 'moderator'  // Moderador
+  | 'user';      // Usuario normal
 
 
 // ============================================================
@@ -107,6 +108,18 @@ export interface Event {
  * Corresponde a la tabla users en MariaDB (Backend)
  * NOTA: El backend usa snake_case
  */
+export interface UserAdmin {
+  uid: string;
+  email: string;
+  display_name: string | null;
+  role: UserRole;
+  photo_url: string | null;
+  created_at: any;
+  email_verified: string;
+  auth_provider: string;
+  google_id: string | null;
+}
+
 export interface UserProfile {
   uid: string;
   email: string;

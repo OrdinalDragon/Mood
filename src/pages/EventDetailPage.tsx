@@ -215,7 +215,7 @@ const [selectedImage, setSelectedImage] = useState('');
         
         <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/60 to-transparent">
           <div className="container mx-auto">
-            <Badge className={`${getCategoryColor(event.category)} text-white border-0 mb-3`}>
+            <Badge className={`${getCategoryColor(event.category)} text-primary-foreground border-0 mb-3`}>
               {categoryLabels[event.category] || event.category}
             </Badge>
             <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">{event.title}</h1>
@@ -590,7 +590,7 @@ const [selectedImage, setSelectedImage] = useState('');
                   toast.success("Evento actualizado");
                   setEditOpen(false);
                 } catch { toast.error("Error al actualizar"); }
-              }} className="bg-primary text-white">Guardar Cambios</Button>
+              }} className="bg-primary text-primary-foreground">Guardar Cambios</Button>
             </div>
           </div>
         </DialogContent>

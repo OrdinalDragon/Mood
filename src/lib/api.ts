@@ -3,7 +3,7 @@
  * Helper para hacer requests al API de FastAPI.
  */
 
-import { Event, UserProfile } from '../types';
+import { Event, UserProfile, UserAdmin } from '../types';
 
 // URL del API desde variables de entorno
 const API_URL = import.meta.env.VITE_API_URL || '/api';
@@ -136,6 +136,19 @@ export async function getUserProfile(): Promise<UserProfile> {
   return getMe();
 }
 
+// Get all users (admin only)
+export async function getUsers(): Promise<UserAdmin[]> {
+  return apiFetch<UserAdmin[]>('/auth/users');
+}
+
+// Update user role (admin only)
+export async function updateUserRole(uid: string, role: string): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/auth/users/${uid}/role`, {
+    method: 'PATCH',
+    body: JSON.stringify({ role }),
+  });
+}
+
 // Logout
 export async function logout(): Promise<void> {
   removeToken();
@@ -167,8 +180,85 @@ export async function login(email: string, password: string, rememberMe: boolean
   return data;
 }
 
+// Google Login
+export async function googleLogin(credential: string): Promise<{ access_token: string }> {
+  const response = await fetch(`${API_URL}/auth/google`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ credential }),
+  });
+
+  if (!response.ok) {
+    let errorMessage = `API Error: ${response.status}`;
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.detail || errorMessage;
+    } catch (e) {
+      // Ignore JSON parse errors
+    }
+    throw new Error(errorMessage);
+  }
+
+  const data = await response.json();
+  setToken(data.access_token);
+  return data;
+}
+
+// Send verification email
+export async function sendVerification(): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>('/auth/send-verification', {
+    method: 'POST',
+  });
+}
+
+// Resend verification email
+export async function resendVerification(email: string): Promise<{ message: string }> {
+  const response = await fetch(`${API_URL}/auth/resend-verification?email=${encodeURIComponent(email)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!response.ok) {
+    let errorMessage = `API Error: ${response.status}`;
+    try { const errorData = await response.json(); errorMessage = errorData.detail || errorMessage; } catch (e) {}
+    throw new Error(errorMessage);
+  }
+  return response.json();
+}
+
+// Forgot password
+export async function forgotPassword(email: string): Promise<{ message: string }> {
+  const response = await fetch(`${API_URL}/auth/forgot-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+  if (!response.ok) {
+    let errorMessage = `API Error: ${response.status}`;
+    try { const errorData = await response.json(); errorMessage = errorData.detail || errorMessage; } catch (e) {}
+    throw new Error(errorMessage);
+  }
+  return response.json();
+}
+
+// Reset password
+export async function resetPassword(token: string, password: string): Promise<{ message: string }> {
+  const response = await fetch(`${API_URL}/auth/reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, password }),
+  });
+  if (!response.ok) {
+    let errorMessage = `API Error: ${response.status}`;
+    try { const errorData = await response.json(); errorMessage = errorData.detail || errorMessage; } catch (e) {}
+    throw new Error(errorMessage);
+  }
+  return response.json();
+}
+
 // Register
-export async function register(email: string, password: string, display_name: string): Promise<UserProfile> {
+export async function register(email: string, password: string, display_name: string): Promise<{ message: string }> {
   const response = await fetch(`${API_URL}/auth/register`, {
     method: 'POST',
     headers: {
@@ -187,10 +277,6 @@ export async function register(email: string, password: string, display_name: st
     }
     throw new Error(errorMessage);
   }
-  
-  // Luego hacer login automático
-  await login(email, password);
-  
-  // Obtener perfil
-  return getUserProfile();
+
+  return response.json();
 }

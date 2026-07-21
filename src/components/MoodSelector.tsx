@@ -32,9 +32,9 @@ export const MoodSelector: React.FC<MoodSelectorProps> = ({ selectedMood, onSele
             className={cn(
               "flex items-center gap-1.5 rounded-full border transition-all text-sm font-medium",
               compact ? "px-2.5 py-1" : "px-4 py-2",
-              isActive
-                ? "bg-primary text-primary-foreground border-primary shadow-md scale-105"
-                : "bg-white text-slate-600 border-slate-200 hover:border-primary/50 hover:text-primary"
+          isActive
+            ? "btn-mood-active shadow-md scale-105"
+            : "bg-white text-slate-600 border-slate-200 hover:border-primary/50 hover:text-primary"
             )}
           >
             <span className="text-base">{mood.emoji}</span>
