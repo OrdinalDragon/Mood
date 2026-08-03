@@ -852,13 +852,18 @@ export default function App() {
                 <div>
                   <h4 className="font-bold text-lg mb-4">Comunidad</h4>
                   <ul className="space-y-2 text-sm text-slate-400">
-                    <li><Link to="/create-event" className="hover:text-white transition-colors">Subir Evento</Link></li>
+                    <li><Link to="/submit" className="hover:text-white transition-colors">Subir Evento</Link></li>
                     <li><Link to="/contact" className="hover:text-white transition-colors">Contacto</Link></li>
-                    <li><Link to="/terms" className="hover:text-white transition-colors">Términos y Condiciones</Link></li>
+                    <li><Link to="/terminos-y-condiciones" className="hover:text-white transition-colors">Términos y Condiciones</Link></li>
                   </ul>
                 </div>
 
               </div>
+            </div>
+
+            {/* Copyright */}
+            <div className="container mx-auto px-4 mt-12 pt-8 border-t border-slate-800 text-center text-slate-500 text-xs">
+              © 2026 MOOD Argentina. Todos los derechos reservados.
             </div>
           </footer>
         </div>
