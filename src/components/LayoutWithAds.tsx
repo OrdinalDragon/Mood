@@ -66,7 +66,7 @@ export const LayoutWithAds: React.FC<LayoutWithAdsProps> = ({ children }) => {
                 </div>
               ))}
             </div>
-            <button className="mt-1 w-full py-2 bg-primary/10 dark:bg-primary/20 text-primary font-semibold rounded-lg hover:bg-primary/20 transition-colors">
+            <button className="mt-1 w-full py-2 bg-primary/10 dark:bg-primary/20 text-white dark:text-black font-semibold rounded-lg hover:bg-primary/20 transition-colors">
               ¡Te esperamos!
             </button>
           </div>
