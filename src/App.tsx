@@ -137,14 +137,45 @@ function HomePage() {
     return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
-  const moodCards = MOODS.map((mood) => {
+  // const moodCards = MOODS.map((mood) => {
+  //   const isActive = contextMood === mood.id;
+  //   return (
+  //     <button
+  //       key={mood.id}
+  //       onClick={() => isActive ? clearMood() : setContextMood(mood.id)}
+  //       className={`
+  //         relative flex flex-col items-center gap-4 p-8 rounded-2xl border-2 transition-all cursor-pointer
+  //         ${isActive
+  //           ? 'btn-mood-active shadow-lg scale-105'
+  //           : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-primary/50 hover:text-primary hover:shadow-md hover:-translate-y-1'
+  //         }
+  //       `}
+  //     >
+  //       <span className="text-6xl">{mood.emoji}</span>
+  //       <span className="font-bold text-lg">{mood.label}</span>
+  //       <span className={`text-sm leading-tight max-w-[140px] ${isActive ? 'text-primary-foreground/80' : 'text-slate-400 dark:text-slate-500'}`}>
+  //         {moodDescriptions[mood.id]}
+  //       </span>
+  //       {isActive && (
+  //         <span className="absolute -top-2.5 -right-2.5 w-7 h-7 bg-primary-foreground text-primary rounded-full text-sm flex items-center justify-center font-bold shadow">
+  //           ✓
+  //         </span>
+  //       )}
+  //     </button>
+  //   );
+  // });
+  const moodCards = MOODS.map((mood, index) => {
     const isActive = contextMood === mood.id;
+    // Si es el último elemento (índice 4), le aplicamos clases especiales para mobile
+    const isLastItem = index === MOODS.length - 1;
+
     return (
       <button
         key={mood.id}
         onClick={() => isActive ? clearMood() : setContextMood(mood.id)}
         className={`
           relative flex flex-col items-center gap-4 p-8 rounded-2xl border-2 transition-all cursor-pointer
+          ${isLastItem ? 'col-span-2 justify-self-center w-full max-w-[calc(50%-0.625rem)] sm:max-w-none sm:col-span-1' : ''}
           ${isActive
             ? 'btn-mood-active shadow-lg scale-105'
             : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-primary/50 hover:text-primary hover:shadow-md hover:-translate-y-1'
@@ -179,7 +210,7 @@ function HomePage() {
           <p className="text-slate-500 dark:text-slate-400 mb-12 max-w-lg mx-auto text-lg">
             Elegí tu estado de ánimo y descubrí eventos pensados para vos
           </p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-5 max-w-4xl mx-auto">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-5 max-w-4xl mx-auto mb-12">
             {moodCards}
           </div>
         </div>
@@ -789,44 +820,45 @@ export default function App() {
           
           {/* Footer */}
           <footer className="bg-slate-900 text-white py-12">
-            <div className="container mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-8">
-              {/* Logo y descripción */}
-              <div className="col-span-1 md:col-span-2">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="h-8 w-8 bg-primary rounded-lg"></div>
-                  <span className="text-xl font-bold">MOOD</span>
+            {/* 1. Usamos text-center en mobile y md:text-left en escritorio */}
+            <div className="container mx-auto px-4 text-center md:text-left">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                
+                {/* Sección 1: Logo y Descripción */}
+                {/* flex-col y items-center centran el logo + texto en mobile */}
+                <div className="flex flex-col items-center md:items-start space-y-4">
+                  <div className="flex items-center gap-2">
+                    {/* Tu imagen o icono de logo */}
+                    <img src="/icono.webp" alt="MOOD" className="h-8 w-auto" />
+                    <span className="text-xl font-bold">MOOD</span>
+                  </div>
+                  <p className="text-slate-400 text-sm max-w-sm">
+                    Transformando la forma en que vivís y explorás tu ciudad. Conectamos personas con experiencias locales únicas en toda Argentina.
+                  </p>
                 </div>
-                <p className="text-slate-400 max-w-sm">
-                  Transformando la forma en que vivís y explorás tu ciudad. 
-                  Conectamos personas con experiencias locales únicas en toda Argentina.
-                </p>
+
+                {/* Sección 2: Explorar */}
+                <div>
+                  <h4 className="font-bold text-lg mb-4">Explorar</h4>
+                  <ul className="space-y-2 text-sm text-slate-400">
+                    <li><Link to="/map" className="hover:text-white transition-colors">Mapa de Eventos</Link></li>
+                    <li><Link to="/calendar" className="hover:text-white transition-colors">Calendario</Link></li>
+                    <li><Link to="/categories" className="hover:text-white transition-colors">Categorías</Link></li>
+                    <li><Link to="/about-moods" className="hover:text-white transition-colors">Sobre los Moods</Link></li>
+                  </ul>
+                </div>
+
+                {/* Sección 3: Comunidad */}
+                <div>
+                  <h4 className="font-bold text-lg mb-4">Comunidad</h4>
+                  <ul className="space-y-2 text-sm text-slate-400">
+                    <li><Link to="/create-event" className="hover:text-white transition-colors">Subir Evento</Link></li>
+                    <li><Link to="/contact" className="hover:text-white transition-colors">Contacto</Link></li>
+                    <li><Link to="/terms" className="hover:text-white transition-colors">Términos y Condiciones</Link></li>
+                  </ul>
+                </div>
+
               </div>
-              
-              {/* Links de explorar */}
-              <div>
-                <h4 className="font-bold mb-4">Explorar</h4>
-                <ul className="space-y-2 text-slate-400 text-sm">
-                  <li><Link to="/map" className="hover:text-white transition-colors">Mapa de Eventos</Link></li>
-                  <li><Link to="/calendar" className="hover:text-white transition-colors">Calendario</Link></li>
-                  <li><Link to="/categories" className="hover:text-white transition-colors">Categorías</Link></li>
-                  <li><Link to="/about-moods" className="hover:text-white transition-colors">Sobre los Moods</Link></li>
-                </ul>
-              </div>
-              
-              {/* Links de comunidad */}
-              <div>
-                <h4 className="font-bold mb-4">Comunidad</h4>
-                <ul className="space-y-2 text-slate-400 text-sm">
-                  <li><Link to="/submit" className="hover:text-white transition-colors">Subir Evento</Link></li>
-                  <li><Link to="/contact" className="hover:text-white transition-colors">Contacto</Link></li>
-                  <li><Link to="/terminos-y-condiciones" className="hover:text-white transition-colors">Términos y Condiciones</Link></li>
-                </ul>
-              </div>
-            </div>
-            
-            {/* Copyright */}
-            <div className="container mx-auto px-4 mt-12 pt-8 border-t border-slate-800 text-center text-slate-500 text-xs">
-              © 2026 MOOD Argentina. Todos los derechos reservados.
             </div>
           </footer>
         </div>

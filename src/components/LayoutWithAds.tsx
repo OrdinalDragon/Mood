@@ -60,7 +60,7 @@ export const LayoutWithAds: React.FC<LayoutWithAdsProps> = ({ children }) => {
   const rightAd = ads.length > 2 ? ads[2] : null;
 
   return (
-    <div className="flex gap-6 px-4">
+    <div className="flex gap-6 px-4 pb-12">
       <aside className="hidden lg:block w-[300px] flex-shrink-0 sticky top-20 h-fit">
         <div className="space-y-4">
           <Link to={`/event/${municipalEventIds['muni-1']}`}>
@@ -97,7 +97,7 @@ export const LayoutWithAds: React.FC<LayoutWithAdsProps> = ({ children }) => {
                 </div>
               ))}
             </div>
-            <button className="mt-1 w-full py-2 bg-primary/10 dark:bg-primary/20 text-primary font-semibold rounded-lg hover:bg-primary/20 transition-colors">
+            <button className="mt-1 w-full py-2 bg-primary/10 dark:bg-primary/20 text-white dark:text-black font-semibold rounded-lg hover:bg-primary/20 transition-colors">
               ¡Te esperamos!
             </button>
           </div>
