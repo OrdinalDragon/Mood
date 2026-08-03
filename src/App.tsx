@@ -207,7 +207,7 @@ function HomePage() {
           <p className="text-slate-500 dark:text-slate-400 mb-12 max-w-lg mx-auto text-lg">
             Elegí tu estado de ánimo y descubrí eventos pensados para vos
           </p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-5 max-w-4xl mx-auto">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-5 max-w-4xl mx-auto mb-12">
             {moodCards}
           </div>
         </div>
