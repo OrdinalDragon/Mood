@@ -33,7 +33,7 @@ export const LayoutWithAds: React.FC<LayoutWithAdsProps> = ({ children }) => {
   const leftAd = municipalAds[0];
 
   return (
-    <div className="flex gap-6 px-4">
+    <div className="flex gap-6 px-4 pb-12">
       <aside className="hidden lg:block w-[300px] flex-shrink-0 sticky top-20 h-fit">
         <div className="space-y-4">
           <Link to={`/event/${municipalEventIds['muni-1']}`}>
