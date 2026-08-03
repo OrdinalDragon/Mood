@@ -3,7 +3,7 @@
  * Helper para hacer requests al API de FastAPI.
  */
 
-import { Event, UserProfile, UserAdmin } from '../types';
+import { Event, UserProfile, UserAdmin, Ad } from '../types';
 
 // URL del API desde variables de entorno
 const API_URL = import.meta.env.VITE_API_URL || '/api';
@@ -131,6 +131,27 @@ export async function getMe(): Promise<UserProfile> {
   return apiFetch<UserProfile>('/auth/me');
 }
 
+// Actualizar perfil de usuario (nombre y/o foto)
+export async function updateProfile(data: { display_name?: string; photo_url?: string }): Promise<UserProfile> {
+  return apiFetch<UserProfile>('/auth/me', {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+// Cambiar contraseña
+export async function changePassword(current_password: string, new_password: string): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>('/auth/change-password', {
+    method: 'POST',
+    body: JSON.stringify({ current_password, new_password }),
+  });
+}
+
+// Obtener eventos creados por el usuario autenticado
+export async function getMyEvents(): Promise<Event[]> {
+  return apiFetch<Event[]>('/events/mine');
+}
+
 // Obtener perfil de usuario (alias)
 export async function getUserProfile(): Promise<UserProfile> {
   return getMe();
@@ -152,6 +173,55 @@ export async function updateUserRole(uid: string, role: string): Promise<{ messa
 // Logout
 export async function logout(): Promise<void> {
   removeToken();
+}
+
+export async function getFavorites(): Promise<Event[]> {
+  return apiFetch<Event[]>('/favorites/');
+}
+
+export async function addFavorite(eventId: string): Promise<{ message: string; favorites: string[] }> {
+  return apiFetch<{ message: string; favorites: string[] }>(`/favorites/${eventId}`, {
+    method: 'POST',
+  });
+}
+
+export async function removeFavorite(eventId: string): Promise<{ message: string; favorites: string[] }> {
+  return apiFetch<{ message: string; favorites: string[] }>(`/favorites/${eventId}`, {
+    method: 'DELETE',
+  });
+}
+
+// Obtener anuncios publicitarios (público)
+export async function getAds(): Promise<Ad[]> {
+  return apiFetch<Ad[]>('/ads/');
+}
+
+// Obtener todos los anuncios incluyendo inactivos (admin)
+export async function getAdsAdmin(): Promise<Ad[]> {
+  return apiFetch<Ad[]>('/ads/admin');
+}
+
+// Crear anuncio (admin)
+export async function createAd(data: Partial<Ad>): Promise<{ message: string; id: string }> {
+  return apiFetch<{ message: string; id: string }>('/ads/', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+// Actualizar anuncio (admin)
+export async function updateAd(adId: string, data: Partial<Ad>): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/ads/${adId}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+// Eliminar anuncio (admin)
+export async function deleteAd(adId: string): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/ads/${adId}`, {
+    method: 'DELETE',
+  });
 }
 
 // Login

@@ -67,6 +67,7 @@ services:
       - "8000:8000"
     volumes:
       - ./app:/app/app:ro
+      - ./uploads:/app/uploads
     depends_on:
       mongo:
         condition: service_healthy

@@ -142,7 +142,7 @@ async def gemini_chat(request: ChatRequest):
 
     try:
         model = genai.GenerativeModel(
-            model_name="gemini-2.5-flash",
+            model_name="gemini-3.5-flash-lite",
             system_instruction=SYSTEM_PROMPT.format(
                 currentMood=request.context.currentMood or "ninguno",
                 location=request.context.location or "no especificada",
@@ -150,8 +150,6 @@ async def gemini_chat(request: ChatRequest):
             ),
             tools=[{"function_declarations": FUNCTION_DECLARATIONS}]
         )
-
-        chat = model.start_chat()
 
         contents = []
         for msg in request.history:
@@ -161,11 +159,11 @@ async def gemini_chat(request: ChatRequest):
                 contents.append({"role": "model", "parts": [{"text": msg.content}]})
             elif msg.role == "function":
                 contents.append({
-                    "role": "function",
+                    "role": "user",
                     "parts": [{"function_response": {"name": msg.name, "response": {"result": msg.content}}}]
                 })
 
-        response = chat.send_message(contents)
+        response = model.generate_content(contents)
 
         for part in response.candidates[0].content.parts:
             if part.function_call:

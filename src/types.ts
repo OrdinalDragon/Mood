@@ -157,6 +157,26 @@ export interface Notification {
 }
 
 
+/**
+ * Ad - Anuncio publicitario lateral
+ * Corresponde a la colección ads en MongoDB.
+ */
+export interface Ad {
+  id: string;
+  badge?: string | null;
+  title: string;
+  subtitle?: string | null;
+  description?: string | null;
+  date?: string | null;
+  location?: string | null;
+  cta_text?: string | null;
+  cta_link?: string | null;
+  image?: string | null;
+  active: boolean;
+  order: number;
+}
+
+
 // ============================================================
 // RESUMEN: RELACIÓN FRONTEND - BACKEND
 // ============================================================

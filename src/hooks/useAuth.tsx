@@ -6,7 +6,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { UserProfile } from '../types';
-import { login as apiLogin, register as apiRegister, logout as apiLogout, getMe, googleLogin as apiGoogleLogin, sendVerification as apiSendVerification, resendVerification as apiResendVerification, forgotPassword as apiForgotPassword, resetPassword as apiResetPassword } from '../lib/api';
+import { login as apiLogin, register as apiRegister, logout as apiLogout, getMe, googleLogin as apiGoogleLogin, sendVerification as apiSendVerification, resendVerification as apiResendVerification, forgotPassword as apiForgotPassword, resetPassword as apiResetPassword, updateProfile as apiUpdateProfile } from '../lib/api';
 
 interface AuthUser {
   uid: string;
@@ -31,6 +31,7 @@ interface AuthContextType {
   resendVerification: (email: string) => Promise<void>;
   forgotPassword: (email: string) => Promise<void>;
   resetPassword: (token: string, password: string) => Promise<void>;
+  updateProfile: (data: { display_name?: string; photo_url?: string }) => Promise<void>;
   logout: () => void;
 }
 
@@ -46,6 +47,7 @@ const AuthContext = createContext<AuthContextType>({
   resendVerification: async () => {},
   forgotPassword: async () => {},
   resetPassword: async () => {},
+  updateProfile: async () => {},
   logout: () => {},
 });
 
@@ -101,6 +103,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(userData as unknown as AuthUser);
   };
 
+  const updateProfile = async (data: { display_name?: string; photo_url?: string }) => {
+    const updated = await apiUpdateProfile(data);
+    setUser(updated as unknown as AuthUser);
+  };
+
   const logout = () => {
     apiLogout();
     setUser(null);
@@ -109,7 +116,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isAdmin = user?.role === 'admin' || user?.email === 'schernetzki96@gmail.com';
 
   return (
-    <AuthContext.Provider value={{ user, profile: user as unknown as UserProfile, loading, isAdmin, login, register, googleLogin, sendVerification, resendVerification, forgotPassword, resetPassword, logout }}>
+    <AuthContext.Provider value={{ user, profile: user as unknown as UserProfile, loading, isAdmin, login, register, googleLogin, sendVerification, resendVerification, forgotPassword, resetPassword, updateProfile, logout }}>
       {children}
     </AuthContext.Provider>
   );

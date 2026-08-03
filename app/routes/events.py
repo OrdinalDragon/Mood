@@ -9,6 +9,16 @@ from app.schemas import EventCreate, EventUpdate, EventResponse, EventListRespon
 from app.routes.auth import get_current_user
 from datetime import datetime, timedelta
 
+
+async def get_current_user_optional(authorization: str = None):
+    """Igual que get_current_user pero devuelve None si no hay token."""
+    if not authorization:
+        return None
+    try:
+        return await get_current_user(authorization)
+    except HTTPException:
+        return None
+
 router = APIRouter(prefix="/events", tags=["Events"])
 
 
@@ -130,6 +140,7 @@ async def list_events(
             'id': e.id, 'title': e.title, 'date': e.date,
             'location': e.location, 'category': e.category,
             'moods': e.moods, 'cover_image': e.cover_image,
+            'images': e.images,
             'image_url': e.image_url,
             'is_free': e.is_free, 'is_outdoor': e.is_outdoor,
             'status': e.status,
@@ -165,6 +176,24 @@ async def get_event_counts():
     }
 
 
+@router.get("/mine", response_model=List[EventListResponse])
+async def get_my_events(current_user: User = Depends(get_current_user)):
+    """Lista los eventos creados por el usuario autenticado."""
+    events = await Event.find(Event.created_by == current_user.uid).sort("-date").to_list()
+    return [
+        {
+            'id': e.id, 'title': e.title, 'date': e.date,
+            'location': e.location, 'category': e.category,
+            'moods': e.moods, 'cover_image': e.cover_image,
+            'images': e.images,
+            'image_url': e.image_url,
+            'is_free': e.is_free, 'is_outdoor': e.is_outdoor,
+            'status': e.status,
+        }
+        for e in events
+    ]
+
+
 @router.get("/{event_id}", response_model=EventResponse)
 async def get_event(event_id: str):
     """Obtiene un evento por su ID."""
@@ -175,7 +204,10 @@ async def get_event(event_id: str):
 
 
 @router.post("/", response_model=EventResponse, status_code=status.HTTP_201_CREATED)
-async def create_event(event_create: EventCreate):
+async def create_event(
+    event_create: EventCreate,
+    current_user: Optional[User] = Depends(get_current_user_optional)
+):
     """Crea un nuevo evento."""
     anonymous_user = await User.find_one(User.uid == "anonymous")
     if not anonymous_user:
@@ -202,8 +234,8 @@ async def create_event(event_create: EventCreate):
         is_free=event_create.is_free,
         is_outdoor=event_create.is_outdoor,
         status="pending",
-        created_by="anonymous",
-        author_name="Usuario"
+        created_by=current_user.uid if current_user else "anonymous",
+        author_name=current_user.display_name or "Usuario"
     )
     await new_event.create()
     return new_event

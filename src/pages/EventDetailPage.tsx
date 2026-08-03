@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Event } from '../types';
-import { getEvent, updateEvent, uploadImage } from '../lib/api';
+import { getEvent, updateEvent, uploadImage, addFavorite, removeFavorite } from '../lib/api';
 import { categoryLabels, sampleEvents } from '../lib/sampleEvents';
 import { useAuth } from '../hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -46,10 +46,12 @@ export const EventDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isAdmin } = useAuth();
+  const { user } = useAuth();
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [attending, setAttending] = useState(false);
   const [attendeeCount, setAttendeeCount] = useState(0);
+  const [isFavorite, setIsFavorite] = useState(false);
 const [editOpen, setEditOpen] = useState(false);
 const [editForm, setEditForm] = useState<Partial<Event>>({});
 const [galleryOpen, setGalleryOpen] = useState(false);
@@ -141,7 +143,10 @@ const [selectedImage, setSelectedImage] = useState('');
         setAttending(true);
       }
     }
-  }, [id]);
+    if (id && user) {
+      setIsFavorite((user.favorites || []).includes(id));
+    }
+  }, [id, user]);
 
   const handleAttend = () => {
     if (!id) return;
@@ -160,6 +165,25 @@ const [selectedImage, setSelectedImage] = useState('');
     
     localStorage.setItem(`event_attendees_${id}`, JSON.stringify(attendeesList));
     setAttendeeCount(attendeesList.length);
+  };
+
+  const handleFavorite = async () => {
+    if (!id) return;
+    if (!user) {
+      toast.error('Por favor, registrate o inicia sesión para guardar este evento en favoritos');
+      return;
+    }
+    try {
+      if (isFavorite) {
+        await removeFavorite(id);
+        setIsFavorite(false);
+      } else {
+        await addFavorite(id);
+        setIsFavorite(true);
+      }
+    } catch (err) {
+      console.error('Error toggling favorite:', err);
+    }
   };
 
   if (loading) {
@@ -325,9 +349,9 @@ const [selectedImage, setSelectedImage] = useState('');
                       <Share2 size={16} className="mr-1" />
                       Compartir
                     </Button>
-                    <Button variant="outline" className="flex-1">
-                      <Heart size={16} className="mr-1" />
-                      Guardar
+                    <Button variant="outline" className="flex-1" onClick={handleFavorite}>
+                      <Heart size={16} className={`mr-1 ${isFavorite ? 'text-red-500 fill-red-500' : ''}`} />
+                      {isFavorite ? 'Guardado' : 'Guardar'}
                     </Button>
                   </div>
                   {isAdmin && (

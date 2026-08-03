@@ -79,11 +79,14 @@ export async function clear_user_mood(): Promise<string> {
 
 export async function add_to_favorites(args: Record<string, any>): Promise<string> {
   try {
-    const existing = JSON.parse(localStorage.getItem('favorites') || '[]');
-    if (!existing.includes(args.event_id)) {
-      existing.push(args.event_id);
-      localStorage.setItem('favorites', JSON.stringify(existing));
-    }
+    const token = getToken();
+    if (!token) return 'Debés iniciar sesión para guardar favoritos';
+
+    const res = await fetch(`${API_URL}/favorites/${encodeURIComponent(args.event_id)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return `Error al agregar a favoritos: ${res.status}`;
     return JSON.stringify({ action: 'add_to_favorites', event_id: args.event_id });
   } catch (err) {
     return `Error al agregar a favoritos: ${err}`;

@@ -46,6 +46,25 @@ class User(Document):
     auth_provider: str = "email"
     google_id: Optional[str] = None
     reset_token: Optional[str] = None
+    favorites: list = []
 
     class Settings:
         name = "users"
+
+
+class Ad(Document):
+    id: str
+    badge: Optional[str] = None
+    title: str
+    subtitle: Optional[str] = None
+    description: Optional[str] = None
+    date: Optional[datetime] = None
+    location: Optional[str] = None
+    cta_text: Optional[str] = None
+    cta_link: Optional[str] = None
+    image: Optional[str] = None
+    active: bool = True
+    order: int = 0
+
+    class Settings:
+        name = "ads"

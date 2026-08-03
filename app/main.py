@@ -46,6 +46,10 @@ from app.routes import upload
 app.include_router(upload.router)
 from app.routes import gemini
 app.include_router(gemini.router)
+from app.routes import favorites
+app.include_router(favorites.router)
+from app.routes import ads
+app.include_router(ads.router)
 
 
 @app.get("/")

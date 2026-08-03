@@ -14,10 +14,10 @@
 import React, { useEffect, useState } from 'react';
 
 // API
-import { getPendingEvents, approveEvent, rejectEvent, deleteEvent, updateEvent, uploadImage, getUsers, updateUserRole } from '../lib/api';
+import { getPendingEvents, approveEvent, rejectEvent, deleteEvent, updateEvent, uploadImage, getUsers, updateUserRole, getAdsAdmin, createAd, updateAd, deleteAd } from '../lib/api';
 
 // Tipos
-import { Event, UserAdmin } from '../types';
+import { Event, UserAdmin, Ad } from '../types';
 
 // UI Components
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,12 +30,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 
 // Iconos
-import { Check, X, Trash2, ExternalLink, Pencil, MapPin, Upload, ImagePlus, Users, Calendar } from 'lucide-react';
+import { Check, X, Trash2, ExternalLink, Pencil, MapPin, Upload, ImagePlus, Users, Calendar, Megaphone, Plus } from 'lucide-react';
 
 // Utils
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { getEventImage } from '../lib/utils';
 
 
 // ============================================================
@@ -66,7 +67,7 @@ const ROLE_COLORS: Record<string, string> = {
 
 export const AdminDashboard: React.FC = () => {
   // ---- ESTADOS ----
-  const [tab, setTab] = useState<'events' | 'users'>('events');
+  const [tab, setTab] = useState<'events' | 'users' | 'ads'>('events');
 
   // Eventos
   const [pendingEvents, setPendingEvents] = useState<Event[]>([]);
@@ -79,6 +80,13 @@ export const AdminDashboard: React.FC = () => {
   const [users, setUsers] = useState<UserAdmin[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [updatingUid, setUpdatingUid] = useState<string | null>(null);
+
+  // Anuncios
+  const [ads, setAds] = useState<Ad[]>([]);
+  const [adsLoading, setAdsLoading] = useState(false);
+  const [adDialogOpen, setAdDialogOpen] = useState(false);
+  const [editingAd, setEditingAd] = useState<Ad | null>(null);
+  const [adForm, setAdForm] = useState<Partial<Ad>>({});
 
   // ---- EFFECT: CARGAR EVENTOS ----
   useEffect(() => {
@@ -112,6 +120,84 @@ export const AdminDashboard: React.FC = () => {
   useEffect(() => {
     if (tab === 'users') loadUsers();
   }, [tab]);
+
+  // ---- CARGAR ANUNCIOS ----
+  const loadAds = async () => {
+    setAdsLoading(true);
+    try {
+      const data = await getAdsAdmin();
+      setAds(data);
+    } catch (error) {
+      toast.error('Error al cargar anuncios');
+    } finally {
+      setAdsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (tab === 'ads') loadAds();
+  }, [tab]);
+
+  const openNewAdDialog = () => {
+    setEditingAd(null);
+    setAdForm({ title: '', badge: 'Exposición MOOD', subtitle: '', description: '', cta_text: 'Ver más', active: true, order: ads.length });
+    setAdDialogOpen(true);
+  };
+
+  const openEditAdDialog = (ad: Ad) => {
+    setEditingAd(ad);
+    setAdForm({ ...ad });
+    setAdDialogOpen(true);
+  };
+
+  const handleAdField = (field: keyof Ad, value: any) => {
+    setAdForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSaveAd = async () => {
+    if (!adForm.title?.trim()) {
+      toast.error('El título es obligatorio');
+      return;
+    }
+    try {
+      const payload: Partial<Ad> = {
+        title: adForm.title,
+        badge: adForm.badge || null,
+        subtitle: adForm.subtitle || null,
+        description: adForm.description || null,
+        date: adForm.date ? new Date(adForm.date).toISOString() : null,
+        location: adForm.location || null,
+        cta_text: adForm.cta_text || 'Ver más',
+        cta_link: adForm.cta_link || null,
+        image: adForm.image || null,
+        active: adForm.active ?? true,
+        order: adForm.order ?? 0,
+      };
+      if (editingAd) {
+        await updateAd(editingAd.id, payload);
+        toast.success('Anuncio actualizado');
+      } else {
+        await createAd(payload);
+        toast.success('Anuncio creado');
+      }
+      setAdDialogOpen(false);
+      loadAds();
+    } catch (error) {
+      toast.error('Error al guardar el anuncio');
+    }
+  };
+
+  const handleDeleteAd = async (ad: Ad) => {
+    if (window.confirm(`¿Eliminar el anuncio "${ad.title}"?`)) {
+      try {
+        await deleteAd(ad.id);
+        setAds(prev => prev.filter(a => a.id !== ad.id));
+        toast.success('Anuncio eliminado');
+      } catch (error) {
+        toast.error('Error al eliminar el anuncio');
+      }
+    }
+  };
 
 
   // ---- HANDLERS ----
@@ -278,6 +364,20 @@ export const AdminDashboard: React.FC = () => {
             <Badge className="ml-1 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs px-1.5 py-0">{users.length}</Badge>
           )}
         </button>
+        <button
+          onClick={() => setTab('ads')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${
+            tab === 'ads'
+              ? 'bg-primary/10 text-primary border-b-2 border-primary'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+          }`}
+        >
+          <Megaphone size={16} />
+          Anuncios
+          {ads.length > 0 && (
+            <Badge className="ml-1 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs px-1.5 py-0">{ads.length}</Badge>
+          )}
+        </button>
       </div>
 
       {/* ---- TAB: EVENTOS ---- */}
@@ -307,18 +407,12 @@ export const AdminDashboard: React.FC = () => {
               <div className="flex flex-col md:flex-row">
                 
                 <div className="w-full md:w-64 h-48 md:h-auto bg-slate-100">
-                  {event.image_url ? (
-                    <img src={event.image_url} alt={event.title} className="w-full h-full object-cover" />
-                  ) : event.cover_image ? (
-                    <img src={event.cover_image} alt={event.title} className="w-full h-full object-cover" />
-                  ) : (
-                    <img 
-                      src={`https://picsum.photos/seed/${Array.isArray(event.category) ? event.category[0] : event.category}/400/300`}
-                      alt={event.title}
-                      className="w-full h-full object-cover"
-                      referrerPolicy="no-referrer"
-                    />
-                  )}
+                  <img
+                    src={getEventImage(event, '400/300', Array.isArray(event.category) ? event.category[0] : event.category)}
+                    alt={event.title}
+                    className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
                 </div>
 
                 <div className="flex-1 p-6">
@@ -453,6 +547,93 @@ export const AdminDashboard: React.FC = () => {
               </div>
             </CardContent>
           </Card>
+        )}
+        </>
+      )}
+
+      {/* ---- TAB: ANUNCIOS ---- */}
+      {tab === 'ads' && (
+        <>
+        {adsLoading ? (
+          <div className="flex justify-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <div className="flex justify-end">
+              <Button onClick={openNewAdDialog} className="bg-primary text-primary-foreground">
+                <Plus size={16} className="mr-1" /> Nuevo anuncio
+              </Button>
+            </div>
+
+            {ads.length === 0 ? (
+              <Card className="text-center py-20 bg-slate-50 border-dashed">
+                <CardContent>
+                  <p className="text-slate-500 dark:text-slate-400 text-lg">
+                    No hay anuncios todavía. Creá el primero.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {ads.map((ad) => (
+                  <Card key={ad.id} className={`overflow-hidden border-slate-200 ${ad.active ? '' : 'opacity-60'}`}>
+                    <div className="relative h-32 bg-gradient-to-br from-primary to-primary/80">
+                      <img
+                        src={ad.image || 'https://picsum.photos/seed/ads-' + ad.id + '/600/300'}
+                        alt={ad.title}
+                        className="w-full h-full object-cover opacity-80"
+                        referrerPolicy="no-referrer"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                      {ad.badge && (
+                        <Badge className="absolute top-2 left-2 bg-primary text-primary-foreground border-0 text-xs">{ad.badge}</Badge>
+                      )}
+                      {!ad.active && (
+                        <Badge className="absolute top-2 right-2 bg-slate-800 text-white border-0 text-xs">Inactivo</Badge>
+                      )}
+                      <div className="absolute bottom-0 left-0 right-0 p-3">
+                        <p className="text-primary-foreground/80 text-xs uppercase tracking-wide">{ad.subtitle}</p>
+                        <h3 className="font-bold text-primary-foreground">{ad.title}</h3>
+                      </div>
+                    </div>
+                    <CardContent className="p-4">
+                      <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{ad.description}</p>
+                      <div className="flex flex-wrap gap-4 text-xs text-slate-500 mb-3">
+                        {ad.date && (
+                          <span>📅 {format(new Date(ad.date), "d 'de' MMMM", { locale: es })}</span>
+                        )}
+                        {ad.location && <span>📍 {ad.location}</span>}
+                        <span className="ml-auto">Orden: {ad.order}</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={() => openEditAdDialog(ad)}>
+                          <Pencil size={14} className="mr-1" /> Editar
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="border-green-200 text-green-600 hover:bg-green-50"
+                          onClick={async () => {
+                            try {
+                              await updateAd(ad.id, { active: !ad.active });
+                              toast.success(ad.active ? 'Anuncio desactivado' : 'Anuncio activado');
+                              loadAds();
+                            } catch { toast.error('Error al cambiar estado'); }
+                          }}
+                        >
+                          {ad.active ? 'Desactivar' : 'Activar'}
+                        </Button>
+                        <Button variant="ghost" size="sm" className="text-slate-400 hover:text-red-600 ml-auto" onClick={() => handleDeleteAd(ad)}>
+                          <Trash2 size={14} />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
         )}
         </>
       )}
@@ -722,6 +903,148 @@ export const AdminDashboard: React.FC = () => {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL DE ANUNCIOS */}
+      <Dialog open={adDialogOpen} onOpenChange={setAdDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingAd ? 'Editar Anuncio' : 'Nuevo Anuncio'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Título *</Label>
+              <Input
+                value={adForm.title || ''}
+                onChange={e => handleAdField('title', e.target.value)}
+                placeholder="Ej: ¡Martes 9 de Junio!"
+              />
+            </div>
+            <div>
+              <Label>Subtítulo</Label>
+              <Input
+                value={adForm.subtitle || ''}
+                onChange={e => handleAdField('subtitle', e.target.value)}
+                placeholder="Ej: Auditorio Pampa Energía"
+              />
+            </div>
+            <div>
+              <Label>Badge (etiqueta)</Label>
+              <Input
+                value={adForm.badge || ''}
+                onChange={e => handleAdField('badge', e.target.value)}
+                placeholder="Ej: Exposición MOOD"
+              />
+            </div>
+            <div>
+              <Label>Descripción</Label>
+              <Textarea
+                value={adForm.description || ''}
+                onChange={e => handleAdField('description', e.target.value)}
+                rows={3}
+                placeholder="Descripción corta del anuncio"
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label>Fecha</Label>
+                <Input
+                  type="datetime-local"
+                  value={adForm.date ? new Date(adForm.date as string).toISOString().slice(0, 16) : ''}
+                  onChange={e => handleAdField('date', e.target.value ? new Date(e.target.value).toISOString() : null)}
+                />
+              </div>
+              <div>
+                <Label>Orden</Label>
+                <Input
+                  type="number"
+                  value={adForm.order ?? 0}
+                  onChange={e => handleAdField('order', Number(e.target.value))}
+                />
+                <p className="text-xs text-slate-500 mt-1">El anuncio del lado izquierdo usa orden 0, el derecho orden 2.</p>
+              </div>
+            </div>
+            <div>
+              <Label>Ubicación</Label>
+              <Input
+                value={adForm.location || ''}
+                onChange={e => handleAdField('location', e.target.value)}
+                placeholder="Ej: Auditorio Pampa Energía, Av. Corrientes 515, CABA"
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label>Texto del botón</Label>
+                <Input
+                  value={adForm.cta_text || ''}
+                  onChange={e => handleAdField('cta_text', e.target.value)}
+                  placeholder="Ej: Agendá tu visita"
+                />
+              </div>
+              <div>
+                <Label>Link del botón (opcional)</Label>
+                <Input
+                  value={adForm.cta_link || ''}
+                  onChange={e => handleAdField('cta_link', e.target.value)}
+                  placeholder="Ej: /event/exposicion-del-proyecto-mood"
+                />
+              </div>
+            </div>
+            <div>
+              <Label>Imagen (URL)</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={adForm.image || ''}
+                  onChange={e => handleAdField('image', e.target.value)}
+                  placeholder="Dejalo vacío para usar imagen aleatoria"
+                />
+                {adForm.image ? (
+                  <button
+                    type="button"
+                    onClick={() => handleAdField('image', null)}
+                    className="px-2 text-slate-400 hover:text-red-600 border rounded-lg"
+                    title="Quitar imagen"
+                  >
+                    <X size={16} />
+                  </button>
+                ) : (
+                  <label className="flex items-center justify-center px-3 border-2 border-dashed rounded-lg cursor-pointer border-slate-300 bg-slate-50 hover:border-primary/60 hover:bg-primary/5 transition text-slate-500 text-xs">
+                    <Upload size={16} className="mr-1" />
+                    Subir
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      className="hidden"
+                      onChange={async e => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        try {
+                          const result = await uploadImage(file);
+                          handleAdField('image', result.url);
+                          toast.success('Imagen subida');
+                        } catch { toast.error('Error al subir'); }
+                        e.target.value = '';
+                      }}
+                    />
+                  </label>
+                )}
+              </div>
+            </div>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={adForm.active ?? true}
+                onChange={e => handleAdField('active', e.target.checked)}
+                className="w-5 h-5 rounded border-slate-300 text-primary focus:ring-primary"
+              />
+              <span className="text-sm font-medium text-slate-700">Activo</span>
+            </label>
+            <div className="flex gap-3 justify-end pt-4 border-t">
+              <Button variant="outline" onClick={() => setAdDialogOpen(false)}>Cancelar</Button>
+              <Button onClick={handleSaveAd} className="bg-primary text-primary-foreground">Guardar</Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

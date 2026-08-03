@@ -1,7 +1,22 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AdBanner, municipalAds } from './AdBanner';
 import { MapPin, Clock } from 'lucide-react';
+import { getAds } from '../lib/api';
+import { Ad } from '../types';
+
+function adToProps(ad: Ad) {
+  return {
+    title: ad.title,
+    subtitle: ad.subtitle || undefined,
+    description: ad.description || undefined,
+    date: ad.date ? new Date(ad.date) : undefined,
+    location: ad.location || undefined,
+    ctaText: ad.cta_text || 'Ver más',
+    badge: ad.badge || undefined,
+    image: ad.image || undefined,
+  };
+}
 
 const municipalEventIds: Record<string, string> = {
   'muni-1': 'exposicion-del-proyecto-mood---sesio',
@@ -30,22 +45,38 @@ interface LayoutWithAdsProps {
 }
 
 export const LayoutWithAds: React.FC<LayoutWithAdsProps> = ({ children }) => {
-  const leftAd = municipalAds[0];
+  const [ads, setAds] = useState<Ad[]>([]);
+  const [loadingAds, setLoadingAds] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    getAds()
+      .then((data) => { if (mounted) setAds(data); })
+      .catch(() => { if (mounted) setAds([]); })
+      .finally(() => { if (mounted) setLoadingAds(false); });
+    return () => { mounted = false; };
+  }, []);
+
+  const rightAd = ads.length > 2 ? ads[2] : null;
 
   return (
     <div className="flex gap-6 px-4">
       <aside className="hidden lg:block w-[300px] flex-shrink-0 sticky top-20 h-fit">
         <div className="space-y-4">
           <Link to={`/event/${municipalEventIds['muni-1']}`}>
-            <AdBanner
-              title={leftAd.title}
-              subtitle={leftAd.subtitle}
-              description={leftAd.description}
-              date={leftAd.date}
-              location={leftAd.location}
-              ctaText={leftAd.ctaText}
-              badge={leftAd.badge}
-            />
+            {!loadingAds && ads[0] ? (
+              <AdBanner {...adToProps(ads[0])} />
+            ) : (
+              <AdBanner
+                title={municipalAds[0].title}
+                subtitle={municipalAds[0].subtitle}
+                description={municipalAds[0].description}
+                date={municipalAds[0].date}
+                location={municipalAds[0].location}
+                ctaText={municipalAds[0].ctaText}
+                badge={municipalAds[0].badge}
+              />
+            )}
           </Link>
           
           <div className="bg-gradient-to-br from-primary to-accent rounded-xl p-4 text-primary-foreground">
@@ -93,15 +124,19 @@ export const LayoutWithAds: React.FC<LayoutWithAdsProps> = ({ children }) => {
       <aside className="hidden xl:block w-[300px] flex-shrink-0 sticky top-20 h-fit">
         <div className="space-y-4">
           <Link to={`/event/${municipalEventIds['muni-3']}`}>
-            <AdBanner
-              title={municipalAds[2].title}
-              subtitle={municipalAds[2].subtitle}
-              description={municipalAds[2].description}
-              date={municipalAds[2].date}
-              location={municipalAds[2].location}
-              ctaText={municipalAds[2].ctaText}
-              badge={municipalAds[2].badge}
-            />
+            {!loadingAds && rightAd ? (
+              <AdBanner {...adToProps(rightAd)} />
+            ) : (
+              <AdBanner
+                title={municipalAds[2].title}
+                subtitle={municipalAds[2].subtitle}
+                description={municipalAds[2].description}
+                date={municipalAds[2].date}
+                location={municipalAds[2].location}
+                ctaText={municipalAds[2].ctaText}
+                badge={municipalAds[2].badge}
+              />
+            )}
           </Link>
 
           <Link to="/map?category=cultural" className="block">

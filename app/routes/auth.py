@@ -9,6 +9,7 @@ import os
 import secrets
 import logging
 from pydantic import BaseModel
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -170,6 +171,50 @@ async def login(data: LoginRequest):
 @router.get("/me", response_model=UserResponse)
 async def get_me(current_user: User = Depends(get_current_user)):
     return current_user
+
+
+class UpdateProfileRequest(BaseModel):
+    display_name: Optional[str] = None
+    photo_url: Optional[str] = None
+
+
+@router.put("/me", response_model=UserResponse)
+async def update_profile(
+    data: UpdateProfileRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Actualiza el perfil del usuario autenticado (nombre y/o foto)."""
+    if data.display_name is not None:
+        name = data.display_name.strip()
+        if not name:
+            raise HTTPException(status_code=400, detail="El nombre no puede estar vacío")
+        current_user.display_name = name
+    if data.photo_url is not None:
+        current_user.photo_url = data.photo_url.strip() or None
+    await current_user.save()
+    return current_user
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+
+@router.post("/change-password")
+async def change_password(
+    data: ChangePasswordRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Cambia la contraseña del usuario autenticado."""
+    if not current_user.password_hash:
+        raise HTTPException(status_code=400, detail="Este usuario no tiene contraseña configurada (usá Google)")
+    if not verify_password(data.current_password, current_user.password_hash):
+        raise HTTPException(status_code=400, detail="La contraseña actual es incorrecta")
+    if len(data.new_password) < 6:
+        raise HTTPException(status_code=400, detail="La nueva contraseña debe tener al menos 6 caracteres")
+    current_user.password_hash = hash_password(data.new_password)
+    await current_user.save()
+    return {"message": "Contraseña actualizada exitosamente"}
 
 
 @router.post("/send-verification")

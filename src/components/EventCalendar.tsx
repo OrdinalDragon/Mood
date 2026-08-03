@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { format, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { MapPin, Clock } from 'lucide-react';
-import { parseEventDate } from '@/lib/utils';
+import { parseEventDate, getEventImage } from '@/lib/utils';
 
 export const EventCalendar: React.FC = () => {
   const [date, setDate] = useState<Date | undefined>(new Date());
@@ -84,7 +84,7 @@ export const EventCalendar: React.FC = () => {
                   <div className="flex">
                     <div className="w-32 h-32 bg-slate-100 flex-shrink-0">
                       <img 
-                        src={`https://picsum.photos/seed/${Array.isArray(event.category) ? event.category[0] : event.category}/200/200`} 
+                        src={getEventImage(event, '200/200', Array.isArray(event.category) ? event.category[0] : event.category)} 
                         alt={event.title}
                         className="w-full h-full object-cover"
                         referrerPolicy="no-referrer"

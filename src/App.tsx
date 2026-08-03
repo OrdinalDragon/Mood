@@ -33,6 +33,8 @@ import { ResetPassword } from './pages/ResetPassword';
 import { ContactPage } from './pages/ContactPage';
 import { CategoriesPage } from './pages/CategoriesPage';
 import { AboutMoodsPage } from './pages/AboutMoodsPage';
+import { FavoritesPage } from './pages/FavoritesPage';
+import { ProfilePage } from './pages/ProfilePage';
 import { EventCard } from '@/components/EventCard';
 import { LayoutWithAds } from './components/LayoutWithAds';
 import { Input } from '@/components/ui/input';
@@ -46,6 +48,7 @@ import { useEffect, useState, useRef } from 'react';
 
 // API del backend
 import { getEvents } from './lib/api';
+import { getEventImage } from './lib/utils';
 
 // Tipos locales
 import { Event } from './types';
@@ -662,7 +665,7 @@ function MapPage() {
                   {/* Imagen */}
                   <div className="h-40 bg-slate-100 dark:bg-slate-700 overflow-hidden">
                     <img 
-                      src={`https://picsum.photos/seed/${selectedEvent.id}/400/200`} 
+                      src={getEventImage(selectedEvent, '400/200')} 
                       alt={selectedEvent.title}
                       className="w-full h-full object-cover"
                       referrerPolicy="no-referrer"
@@ -772,6 +775,8 @@ export default function App() {
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/giveaways" element={<GiveawaysPage />} />
             <Route path="/categories" element={<CategoriesPage />} />
+            <Route path="/favorites" element={<FavoritesPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
             <Route path="/about-moods" element={<AboutMoodsPage />} />
             <Route path="/contact" element={<ContactPage />} />
             <Route path="/terminos-y-condiciones" element={<TerminosYCondiciones />} />

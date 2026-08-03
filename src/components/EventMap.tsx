@@ -37,6 +37,7 @@ import { useNavigate } from 'react-router-dom';
 
 // Labels
 import { categoryLabels } from '@/lib/sampleEvents';
+import { getEventImage } from '../lib/utils';
 
 // Utils
 import { parseEventDate } from '@/lib/utils';
@@ -380,7 +381,7 @@ export const EventMap: React.FC<EventMapProps> = ({
                 <CardContent className="p-0">
                   <div className="h-32 bg-slate-100 rounded-t-lg overflow-hidden relative">
                     <img 
-                      src={`https://picsum.photos/seed/${event.id}/400/200`} 
+                      src={getEventImage(event, '400/200')} 
                       alt={event.title}
                       className="w-full h-full object-cover"
                       referrerPolicy="no-referrer"

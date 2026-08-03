@@ -39,3 +39,18 @@ export function parseEventDate(date: any): Date | null {
   if (typeof date === 'string') return new Date(date);
   return null;
 }
+
+/**
+ * getEventImage - Devuelve la imagen del evento si tiene una,
+ * o una imagen aleatoria de picsum como fallback.
+ */
+export function getEventImage(
+  event: { image_url?: string | null; cover_image?: string | null; id: string; category?: string | string[] | null },
+  size = '400/300',
+  seed?: string
+): string {
+  if (event.image_url) return event.image_url;
+  if (event.cover_image) return event.cover_image;
+  const s = seed || event.id;
+  return `https://picsum.photos/seed/${s}/${size}`;
+}

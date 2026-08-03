@@ -115,7 +115,7 @@ export const Navbar: React.FC = () => {
           </Link>
 
           {/* Links de navegación (hidden en mobile) */}
-          <div className="hidden items-center gap-6 md:flex">
+          <div className="hidden items-center gap-6 lg:flex">
             <Link to="/map" className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-primary transition-colors flex items-center gap-1">
               <MapPin size={16} /> Mapa
             </Link>
@@ -225,7 +225,7 @@ export const Navbar: React.FC = () => {
       </nav>
 
       {/* Mood selector (mobile) */}
-      <div className="md:hidden flex items-center justify-center gap-2 pb-3 px-4 border-b border-slate-100 dark:border-slate-800 dark:bg-slate-950">
+      <div className="lg:hidden flex items-center justify-center gap-2 pb-3 px-4 border-b border-slate-100 dark:border-slate-800 dark:bg-slate-950">
         {activeMood && (
           <button
             onClick={() => handleMoodSelect(activeMood)}

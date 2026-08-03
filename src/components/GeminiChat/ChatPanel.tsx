@@ -24,7 +24,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ messages, isLoading, onSen
   const hasMessages = messages.length > 0;
 
   return (
-    <div className="flex flex-col h-full bg-card rounded-t-2xl md:rounded-2xl border border-border shadow-2xl overflow-hidden">
+    <div className="flex flex-col h-full bg-card rounded-t-2xl sm:rounded-2xl border border-border shadow-2xl overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/50">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center">

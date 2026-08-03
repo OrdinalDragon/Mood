@@ -135,6 +135,7 @@ export const EventForm: React.FC = () => {
         category,
         moods: selectedMoods.length > 0 ? selectedMoods : undefined,
         cover_image: coverImageUrl || undefined,
+        image_url: coverImageUrl || undefined,
         images: galleryUrls.length > 0 ? galleryUrls : undefined,
         is_free: isFree,
         is_outdoor: isOutdoor,

@@ -37,14 +37,14 @@ export const GeminiChat: React.FC = () => {
     <>
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/20 z-40 md:hidden"
+          className="fixed inset-0 bg-black/20 z-40 sm:hidden"
           onClick={() => setIsOpen(false)}
         />
       )}
 
-      <div className={`fixed z-50 ${isOpen ? 'bottom-0 right-0 left-0 md:bottom-4 md:right-4 md:left-auto md:w-[400px]' : 'bottom-4 right-4'}`}>
+      <div className={`fixed z-50 ${isOpen ? 'bottom-4 right-4 left-4 sm:left-auto sm:w-[400px]' : 'bottom-4 right-4'}`}>
         {isOpen ? (
-          <div className="h-[80vh] md:h-[550px] md:w-[400px] animate-in slide-in-from-bottom-2 duration-200">
+          <div className="h-[80vh] sm:h-[550px] sm:w-[400px] animate-in slide-in-from-bottom-2 duration-200">
             <ChatPanel
               messages={messages}
               isLoading={isLoading}

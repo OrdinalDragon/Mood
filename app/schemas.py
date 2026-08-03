@@ -72,6 +72,7 @@ class EventListResponse(BaseModel):
     category: Optional[list] = None
     moods: Optional[list[str]] = None
     cover_image: Optional[str] = None
+    images: Optional[list[str]] = None
     image_url: Optional[str] = None
     is_free: Optional[bool] = False
     is_outdoor: Optional[bool] = False
@@ -85,6 +86,7 @@ class UserResponse(BaseModel):
     role: str = "user"
     photo_url: Optional[str] = None
     created_at: Optional[datetime] = None
+    favorites: list[str] = []
 
 
 class UserAdminResponse(BaseModel):
