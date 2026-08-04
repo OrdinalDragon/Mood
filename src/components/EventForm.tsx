@@ -90,6 +90,8 @@ export const EventForm: React.FC = () => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [date, setDate] = useState<Date>();
+  const [time, setTime] = useState('14:00');
+  const [endTime, setEndTime] = useState('');
   const [category, setCategory] = useState('');
   const [city, setCity] = useState('');
   const [province, setProvince] = useState('');
@@ -120,11 +122,34 @@ export const EventForm: React.FC = () => {
 
     setLoading(true);
     try {
+      // Combinar fecha y hora en un solo datetime local
+      const [hh, mm] = (time || '14:00').split(':').map(Number);
+      const dateTime = new Date(
+        date.getFullYear(), date.getMonth(), date.getDate(),
+        hh || 0, mm || 0
+      );
+
+      // Horario de finalización opcional
+      let endDateTime: Date | undefined;
+      if (endTime) {
+        const [ehh, emm] = endTime.split(':').map(Number);
+        endDateTime = new Date(
+          date.getFullYear(), date.getMonth(), date.getDate(),
+          ehh || 0, emm || 0
+        );
+        if (endDateTime <= dateTime) {
+          setLoading(false);
+          toast.error('La hora de finalización debe ser posterior al inicio');
+          return;
+        }
+      }
+
       // ---- GUARDAR EN BACKEND ----
       const newEvent = await createEvent({
         title,
         description,
-        date: date.toISOString(),
+        date: dateTime.toISOString(),
+        end_date: endDateTime ? endDateTime.toISOString() : null,
         location: {
           address,
           city,
@@ -146,7 +171,7 @@ export const EventForm: React.FC = () => {
       const eventsList = userEvents ? JSON.parse(userEvents) : [];
       eventsList.push({
         ...newEvent,
-        date: { toDate: () => new Date(date) },
+        date: dateTime.toISOString(),
         status: 'pending'
       });
       localStorage.setItem('user_created_events', JSON.stringify(eventsList));
@@ -241,8 +266,8 @@ export const EventForm: React.FC = () => {
             />
           </div>
 
-          {/* ---- FILA: CATEGORÍA + FECHA ---- */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* ---- FILA: CATEGORÍA + FECHA + HORA ---- */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Categoría */}
             <div className="space-y-2">
               <Label>Categoría</Label>
@@ -289,6 +314,31 @@ export const EventForm: React.FC = () => {
                 </PopoverContent>
               </Popover>
             </div>
+
+            {/* Hora - using Input type="time" */}
+            <div className="space-y-2">
+              <Label>Hora</Label>
+              <Input
+                type="time"
+                required
+                value={time}
+                onChange={(e) => setTime(e.target.value)}
+                className="h-11"
+              />
+              <p className="text-xs text-slate-400">Horario de inicio del evento</p>
+            </div>
+          </div>
+
+          {/* Hora de finalización (opcional) */}
+          <div className="space-y-2">
+            <Label>Hora de finalización (opcional)</Label>
+            <Input
+              type="time"
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
+              className="max-w-xs"
+            />
+            <p className="text-xs text-slate-400">Dejalo vacío si no sabés cuándo termina</p>
           </div>
 
           {/* ---- CAMPO: DESCRIPCIÓN ---- */}

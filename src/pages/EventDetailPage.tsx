@@ -4,6 +4,7 @@ import { Event } from '../types';
 import { getEvent, updateEvent, uploadImage, addFavorite, removeFavorite } from '../lib/api';
 import { categoryLabels, sampleEvents } from '../lib/sampleEvents';
 import { useAuth } from '../hooks/useAuth';
+import { toLocalDatetimeString } from '../lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -36,7 +37,10 @@ const parseEventDate = (date: any): Date | null => {
   if (date instanceof Date) return date;
   if (date.toDate && typeof date.toDate === 'function') return date.toDate();
   if (date.seconds && date.nanoseconds) return new Date(date.seconds * 1000);
-  if (typeof date === 'string') return new Date(date);
+  if (typeof date === 'string') {
+    const s = date.replace(/Z$/i, '').replace(/\.\d{3}Z?$/i, '');
+    return new Date(s);
+  }
   const parsed = new Date(date);
   if (!isNaN(parsed.getTime())) return parsed;
   return null;
@@ -363,6 +367,7 @@ const [selectedImage, setSelectedImage] = useState('');
                           title: event.title,
                           description: event.description,
                           date: event.date,
+                          end_date: event.end_date,
                           category: Array.isArray(event.category) ? event.category[0] : event.category,
                           moods: event.moods,
                           is_free: event.is_free,
@@ -385,13 +390,13 @@ const [selectedImage, setSelectedImage] = useState('');
                   <div className="flex justify-between">
                     <span className="text-slate-500 dark:text-slate-400">Fecha</span>
                     <span className="font-medium text-slate-900 dark:text-white">
-                      {format(parseEventDate(event.date), 'dd/MM/yyyy')}
+                      {(() => { const d = parseEventDate(event.date); return d ? format(d, 'dd/MM/yyyy') : '—'; })()}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-500 dark:text-slate-400">Hora</span>
                     <span className="font-medium text-slate-900 dark:text-white">
-                      {format(new Date(event.date), 'HH:mm')} hs
+                      {(() => { const d = parseEventDate(event.date); const ed = parseEventDate(event.end_date); return d ? `${format(d, 'HH:mm')} hs${ed ? ` a ${format(ed, 'HH:mm')} hs` : ''}` : '—'; })()}
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -424,7 +429,11 @@ const [selectedImage, setSelectedImage] = useState('');
             </div>
             <div>
               <Label>Fecha</Label>
-              <Input type="datetime-local" value={editForm.date ? new Date(editForm.date as string).toISOString().slice(0, 16) : ''} onChange={e => setEditForm(p => ({ ...p, date: new Date(e.target.value).toISOString() }))} />
+              <Input type="datetime-local" value={toLocalDatetimeString(editForm.date)} onChange={e => setEditForm(p => ({ ...p, date: e.target.value || null }))} />
+            </div>
+            <div>
+              <Label>Fin (opcional)</Label>
+              <Input type="datetime-local" value={toLocalDatetimeString(editForm.end_date)} onChange={e => setEditForm(p => ({ ...p, end_date: e.target.value || null }))} />
             </div>
             <div>
               <Label>Categoría</Label>
@@ -444,8 +453,8 @@ const [selectedImage, setSelectedImage] = useState('');
             <div>
               <Label>Estados de ánimo</Label>
               <div className="flex flex-wrap gap-2 mt-1">
-                {['alegre','triste','energetico','reservado','romantico','estresado'].map(mId => {
-                  const labels: Record<string,string> = { alegre:'😊 Alegre', triste:'😢 Triste', energetico:'⚡ Enérgico', reservado:'😐 Reservado', romantico:'💕 Romántico', estresado:'😫 Estresado' };
+                {['alegre','triste','enojado','tranquilo','reservado'].map(mId => {
+                  const labels: Record<string,string> = { alegre:'😊 Alegre', triste:'😢 Triste', enojado:'😠 Enojado', tranquilo:'😌 Tranquilo', reservado:'😐 Reservado' };
                   const selected = ((editForm.moods as string[]) || []).includes(mId);
                   return (
                     <button key={mId} type="button" onClick={() => setEditForm(p => {

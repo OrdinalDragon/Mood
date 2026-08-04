@@ -36,8 +36,22 @@ export function parseEventDate(date: any): Date | null {
   if (!date) return null;
   if (date instanceof Date) return date;
   if (date?.toDate && typeof date.toDate === 'function') return date.toDate();
-  if (typeof date === 'string') return new Date(date);
+  if (typeof date === 'string') {
+    const s = date.replace(/Z$/i, '').replace(/\.\d{3}Z?$/i, '');
+    return new Date(s);
+  }
   return null;
+}
+
+/**
+ * toLocalDatetimeString - Formatea una fecha como "YYYY-MM-DDTHH:MM" en hora LOCAL
+ * Acepta Date, string ISO, Firebase Timestamp u objetos. Devuelve '' si es inválida.
+ */
+export function toLocalDatetimeString(date: any): string {
+  const d = parseEventDate(date);
+  if (!d || isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 /**
@@ -53,4 +67,36 @@ export function getEventImage(
   if (event.cover_image) return event.cover_image;
   const s = seed || event.id;
   return `https://picsum.photos/seed/${s}/${size}`;
+}
+
+/**
+ * formatRelativeTime - "hace 5 min", "hace 2 hs", "hace 3 días"
+ * Acepta Date, string ISO o Firebase Timestamp.
+ */
+export function formatRelativeTime(date: any): string {
+  const d = parseEventDate(date);
+  if (!d || isNaN(d.getTime())) return '';
+  const diff = Date.now() - d.getTime();
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return 'ahora';
+  if (minutes < 60) return `hace ${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `hace ${hours} hs`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return 'hace 1 día';
+  return `hace ${days} días`;
+}
+
+/**
+ * formatCountdown - "Hoy", "Mañana", "Faltan N días" hasta una fecha futura.
+ * Acepta Date, string ISO o Firebase Timestamp.
+ */
+export function formatCountdown(date: any): string {
+  const d = parseEventDate(date);
+  if (!d || isNaN(d.getTime())) return '';
+  const diff = d.getTime() - Date.now();
+  const days = Math.ceil(diff / 86400000);
+  if (days <= 0) return 'Hoy';
+  if (days === 1) return 'Mañana';
+  return `Faltan ${days} días`;
 }

@@ -118,6 +118,15 @@ export interface UserAdmin {
   email_verified: string;
   auth_provider: string;
   google_id: string | null;
+  banned?: boolean;
+  banned_at?: any;
+}
+
+export interface Ban {
+  email: string;
+  display_name?: string | null;
+  banned_at?: any;
+  banned_by?: string | null;
 }
 
 export interface UserProfile {
@@ -133,27 +142,42 @@ export interface UserProfile {
 
 
 /**
- * Notification - Notificaciones del sistema (sin usar)
- * Planeado para alertas de eventos cercanos
+ * Notification - Notificaciones del sistema
+ * Tipos: event_approved | event_rejected | event_submitted | favorite_near
  */
 export interface Notification {
   /** ID único de la notificación */
   id: string;
-  
+
   /** UID del usuario destinatario */
-  userId: string;
-  
+  user_id: string;
+
+  /** Tipo de notificación */
+  type: string;
+
   /** Título de la notificación */
   title: string;
-  
+
   /** Mensaje de la notificación */
   message: string;
-  
+
+  /** Ruta de la app a la que navega al clickear */
+  link?: string | null;
+
+  /** ID del evento relacionado (si aplica) */
+  event_id?: string | null;
+
+  /** Fecha del evento (para countdown de favoritos cerca) */
+  event_date?: string | null;
+
+  /** Cantidad agregada (notificaciones tipo "hay X ...") */
+  event_count?: number | null;
+
   /** Si ya fue leída */
   read: boolean;
-  
+
   /** Fecha de creación */
-  createdAt: any;
+  created_at: string;
 }
 
 
@@ -174,6 +198,11 @@ export interface Ad {
   image?: string | null;
   active: boolean;
   order: number;
+  hero?: boolean;
+  icon?: string | null;
+  gradient?: string | null;
+  badge_color?: string | null;
+  footer?: string | null;
 }
 
 

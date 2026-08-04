@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { format, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { MapPin, Clock } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { parseEventDate, getEventImage } from '@/lib/utils';
 
 export const EventCalendar: React.FC = () => {
@@ -80,32 +81,34 @@ export const EventCalendar: React.FC = () => {
           ) : (
             <div className="space-y-4">
               {selectedEvents.map(event => (
-                <Card key={event.id} className="overflow-hidden hover:shadow-md transition-shadow">
-                  <div className="flex">
-                    <div className="w-32 h-32 bg-slate-100 flex-shrink-0">
-                      <img 
-                        src={getEventImage(event, '200/200', Array.isArray(event.category) ? event.category[0] : event.category)} 
-                        alt={event.title}
-                        className="w-full h-full object-cover"
-                        referrerPolicy="no-referrer"
-                      />
-                    </div>
-                    <div className="p-4 flex-1">
-                      <div className="flex justify-between items-start">
-                        <Badge variant="secondary" className="mb-2 uppercase text-[10px] tracking-wider">
-                          {Array.isArray(event.category) ? event.category.join(', ') : event.category}
-                        </Badge>
-                        <span className="text-xs font-medium text-slate-400 flex items-center gap-1">
-                          <Clock size={12} /> {(() => { const d = parseEventDate(event.date); return d ? format(d, "HH:mm") + ' hs' : ''; })()}
-                        </span>
+                <Link key={event.id} to={`/event/${event.id}`}>
+                  <Card className="overflow-hidden hover:shadow-md transition-shadow hover:border-primary/50">
+                    <div className="flex">
+                      <div className="w-32 h-32 bg-slate-100 flex-shrink-0">
+                        <img 
+                          src={getEventImage(event, '200/200', Array.isArray(event.category) ? event.category[0] : event.category)} 
+                          alt={event.title}
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                        />
                       </div>
-                      <h3 className="font-bold text-slate-900 mb-1">{event.title}</h3>
-                      <div className="flex items-center gap-1 text-xs text-slate-500">
-                        <MapPin size={12} /> {event.location.city}, {event.location.province}
+                      <div className="p-4 flex-1">
+                        <div className="flex justify-between items-start">
+                          <Badge variant="secondary" className="mb-2 uppercase text-[10px] tracking-wider">
+                            {Array.isArray(event.category) ? event.category.join(', ') : event.category}
+                          </Badge>
+                          <span className="text-xs font-medium text-slate-400 flex items-center gap-1">
+                            <Clock size={12} /> {(() => { const d = parseEventDate(event.date); return d ? format(d, "HH:mm") + ' hs' : ''; })()}
+                          </span>
+                        </div>
+                        <h3 className="font-bold text-slate-900 mb-1">{event.title}</h3>
+                        <div className="flex items-center gap-1 text-xs text-slate-500">
+                          <MapPin size={12} /> {event.location.city}, {event.location.province}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </Card>
+                  </Card>
+                </Link>
               ))}
             </div>
           )}

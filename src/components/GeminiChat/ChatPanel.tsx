@@ -55,7 +55,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ messages, isLoading, onSen
           </div>
         )}
         {messages.map((msg, i) => (
-          <ChatMessage key={i} role={msg.role} content={msg.content} name={msg.name} />
+          <ChatMessage key={i} role={msg.role} content={msg.content} name={msg.name} done={msg.done} />
         ))}
         {isLoading && (
           <div className="flex justify-start">

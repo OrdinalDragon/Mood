@@ -3,7 +3,7 @@
  * Helper para hacer requests al API de FastAPI.
  */
 
-import { Event, UserProfile, UserAdmin, Ad } from '../types';
+import { Event, UserProfile, UserAdmin, Ad, Ban, Notification } from '../types';
 
 // URL del API desde variables de entorno
 const API_URL = import.meta.env.VITE_API_URL || '/api';
@@ -40,6 +40,10 @@ async function apiFetch<T>(url: string, options: RequestInit = {}): Promise<T> {
 
   if (!response.ok) {
     throw new Error(`API Error: ${response.status}`);
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
   }
 
   return response.json();
@@ -170,9 +174,60 @@ export async function updateUserRole(uid: string, role: string): Promise<{ messa
   });
 }
 
+// Delete user (admin only)
+export async function deleteUser(uid: string): Promise<void> {
+  await apiFetch<void>(`/auth/users/${uid}`, {
+    method: 'DELETE',
+  });
+}
+
+// Ban user (admin only)
+export async function banUser(uid: string): Promise<{ message: string; email: string }> {
+  return apiFetch<{ message: string; email: string }>(`/auth/users/${uid}/ban`, {
+    method: 'POST',
+  });
+}
+
+// List banned emails (admin only)
+export async function getBans(): Promise<Ban[]> {
+  return apiFetch<Ban[]>('/auth/bans');
+}
+
+// Unban email (admin only)
+export async function unbanUser(email: string): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>('/auth/bans/unban', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}
+
 // Logout
 export async function logout(): Promise<void> {
   removeToken();
+}
+
+// Listar notificaciones del usuario (máx. 10, no leídas primero)
+export async function getNotifications(): Promise<Notification[]> {
+  return apiFetch<Notification[]>('/notifications/');
+}
+
+// Contador de notificaciones no leídas
+export async function getUnreadCount(): Promise<{ unread_count: number }> {
+  return apiFetch<{ unread_count: number }>('/notifications/unread-count');
+}
+
+// Marcar una notificación como leída
+export async function markNotificationRead(id: string): Promise<Notification> {
+  return apiFetch<Notification>(`/notifications/${id}/read`, {
+    method: 'PATCH',
+  });
+}
+
+// Marcar todas las notificaciones como leídas
+export async function markAllNotificationsRead(): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>('/notifications/read-all', {
+    method: 'PATCH',
+  });
 }
 
 export async function getFavorites(): Promise<Event[]> {

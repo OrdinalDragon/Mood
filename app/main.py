@@ -2,6 +2,7 @@
 # app/main.py - Aplicación FastAPI Principal
 # ============================================================
 import os
+import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,7 +13,17 @@ from app.database import init_db, close_db
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+
+    from app.scheduler import notification_scan_loop
+    scan_task = asyncio.create_task(notification_scan_loop())
+
     yield
+
+    scan_task.cancel()
+    try:
+        await scan_task
+    except asyncio.CancelledError:
+        pass
     await close_db()
 
 
@@ -50,6 +61,8 @@ from app.routes import favorites
 app.include_router(favorites.router)
 from app.routes import ads
 app.include_router(ads.router)
+from app.routes import notifications
+app.include_router(notifications.router)
 
 
 @app.get("/")

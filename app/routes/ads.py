@@ -23,6 +23,11 @@ class AdCreate(BaseModel):
     image: Optional[str] = None
     active: bool = True
     order: int = 0
+    hero: bool = False
+    icon: Optional[str] = None
+    gradient: Optional[str] = None
+    badge_color: Optional[str] = None
+    footer: Optional[str] = None
 
 
 class AdUpdate(BaseModel):
@@ -37,29 +42,40 @@ class AdUpdate(BaseModel):
     image: Optional[str] = None
     active: Optional[bool] = None
     order: Optional[int] = None
+    hero: Optional[bool] = None
+    icon: Optional[str] = None
+    gradient: Optional[str] = None
+    badge_color: Optional[str] = None
+    footer: Optional[str] = None
+
+
+def _ad_dict(a) -> dict:
+    return {
+        "id": a.id,
+        "title": a.title,
+        "badge": a.badge,
+        "subtitle": a.subtitle,
+        "description": a.description,
+        "date": a.date,
+        "location": a.location,
+        "cta_text": a.cta_text,
+        "cta_link": a.cta_link,
+        "image": a.image,
+        "active": a.active,
+        "order": a.order,
+        "hero": a.hero,
+        "icon": a.icon,
+        "gradient": a.gradient,
+        "badge_color": a.badge_color,
+        "footer": a.footer,
+    }
 
 
 @router.get("/")
 async def list_ads():
     """Lista todos los anuncios activos, ordenados por `order`."""
     ads = await Ad.find(Ad.active == True).sort(Ad.order).to_list()
-    return [
-        {
-            "id": a.id,
-            "title": a.title,
-            "badge": a.badge,
-            "subtitle": a.subtitle,
-            "description": a.description,
-            "date": a.date,
-            "location": a.location,
-            "cta_text": a.cta_text,
-            "cta_link": a.cta_link,
-            "image": a.image,
-            "active": a.active,
-            "order": a.order,
-        }
-        for a in ads
-    ]
+    return [_ad_dict(a) for a in ads]
 
 
 @router.get("/admin")
@@ -68,23 +84,7 @@ async def list_all_ads(current_user: User = Depends(get_current_user)):
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Se requieren permisos de administrador")
     ads = await Ad.find_all().sort(Ad.order).to_list()
-    return [
-        {
-            "id": a.id,
-            "title": a.title,
-            "badge": a.badge,
-            "subtitle": a.subtitle,
-            "description": a.description,
-            "date": a.date,
-            "location": a.location,
-            "cta_text": a.cta_text,
-            "cta_link": a.cta_link,
-            "image": a.image,
-            "active": a.active,
-            "order": a.order,
-        }
-        for a in ads
-    ]
+    return [_ad_dict(a) for a in ads]
 
 
 def _slugify(text: str) -> str:
@@ -113,6 +113,11 @@ async def create_ad(data: AdCreate, current_user: User = Depends(get_current_use
         image=data.image,
         active=data.active,
         order=data.order,
+        hero=data.hero,
+        icon=data.icon,
+        gradient=data.gradient,
+        badge_color=data.badge_color,
+        footer=data.footer,
     )
     await ad.create()
     return {"message": "Anuncio creado", "id": ad_id}

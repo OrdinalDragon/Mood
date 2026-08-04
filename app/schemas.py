@@ -25,6 +25,7 @@ class EventCreate(BaseModel):
     title: str
     description: Optional[str] = None
     date: datetime
+    end_date: Optional[datetime] = None
     location: LocationSchema
     category: EventCategory = EventCategory.cultural
     moods: Optional[list[str]] = None
@@ -38,6 +39,7 @@ class EventUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
     location: Optional[LocationSchema] = None
     category: Optional[EventCategory] = None
     moods: Optional[list[str]] = None
@@ -52,6 +54,7 @@ class EventResponse(BaseModel):
     title: str
     description: Optional[str] = None
     date: datetime
+    end_date: Optional[datetime] = None
     location: dict
     category: Optional[list] = None
     moods: Optional[list[str]] = None
@@ -99,3 +102,16 @@ class UserAdminResponse(BaseModel):
     email_verified: str = "0"
     auth_provider: str = "email"
     google_id: Optional[str] = None
+
+class NotificationResponse(BaseModel):
+    id: str
+    user_id: str
+    type: str
+    title: str
+    message: str
+    link: Optional[str] = None
+    event_id: Optional[str] = None
+    event_date: Optional[datetime] = None
+    event_count: Optional[int] = None
+    read: bool = False
+    created_at: Optional[datetime] = None

@@ -47,9 +47,21 @@ class User(Document):
     google_id: Optional[str] = None
     reset_token: Optional[str] = None
     favorites: list = []
+    banned: bool = False
+    banned_at: Optional[datetime] = None
 
     class Settings:
         name = "users"
+
+
+class BannedEmail(Document):
+    email: str
+    display_name: Optional[str] = None
+    banned_at: Optional[datetime] = None
+    banned_by: Optional[str] = None
+
+    class Settings:
+        name = "banned_emails"
 
 
 class Ad(Document):
@@ -65,6 +77,28 @@ class Ad(Document):
     image: Optional[str] = None
     active: bool = True
     order: int = 0
+    hero: bool = False
+    icon: Optional[str] = None
+    gradient: Optional[str] = None
+    badge_color: Optional[str] = None
+    footer: Optional[str] = None
 
     class Settings:
         name = "ads"
+
+
+class Notification(Document):
+    id: str
+    user_id: str
+    type: str
+    title: str
+    message: str
+    link: Optional[str] = None
+    event_id: Optional[str] = None
+    event_date: Optional[datetime] = None
+    event_count: Optional[int] = None
+    read: bool = False
+    created_at: Optional[datetime] = None
+
+    class Settings:
+        name = "notifications"

@@ -4,18 +4,35 @@ interface ChatMessageProps {
   role: 'user' | 'model' | 'function';
   content: string;
   name?: string;
+  done?: boolean;
 }
 
-export const ChatMessage: React.FC<ChatMessageProps> = ({ role, content, name }) => {
+const FUNCTION_LABELS: Record<string, { busy: string; done: string }> = {
+  search_events: { busy: 'Buscando eventos...', done: 'Eventos encontrados' },
+  get_event_detail: { busy: 'Obteniendo detalle...', done: 'Detalle obtenido' },
+  get_mood_info: { busy: 'Consultando mood...', done: 'Mood consultado' },
+  set_user_mood: { busy: 'Cambiando mood...', done: 'Mood actualizado' },
+  clear_user_mood: { busy: 'Limpiando mood...', done: 'Mood limpiado' },
+  add_to_favorites: { busy: 'Guardando favorito...', done: 'Favorito guardado' },
+  share_event: { busy: 'Compartiendo...', done: 'Compartido' },
+};
+
+export const ChatMessage: React.FC<ChatMessageProps> = ({ role, content, name, done }) => {
   if (role === 'function') {
+    const labels = name ? FUNCTION_LABELS[name] : undefined;
+    const displayText = done
+      ? (labels?.done || 'Listo')
+      : (labels?.busy || `${name}...`);
+
     return (
       <div className="flex justify-center">
         <div className="text-xs text-muted-foreground bg-muted px-3 py-1 rounded-full flex items-center gap-1.5">
-          <span className="animate-spin w-3 h-3 border-2 border-primary border-t-transparent rounded-full" />
-          {name === 'search_events' && 'Buscando eventos...'}
-          {name === 'get_event_detail' && 'Obteniendo detalle...'}
-          {name === 'get_mood_info' && 'Consultando mood...'}
-          {name !== 'search_events' && name !== 'get_event_detail' && name !== 'get_mood_info' && `Ejecutando...`}
+          {done ? (
+            <span className="w-3 h-3 flex items-center justify-center text-primary text-[10px] font-bold">&#10003;</span>
+          ) : (
+            <span className="animate-spin w-3 h-3 border-2 border-primary border-t-transparent rounded-full" />
+          )}
+          {displayText}
         </div>
       </div>
     );

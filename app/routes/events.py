@@ -3,14 +3,19 @@
 # ============================================================
 import math
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Header
 from app.models import Event, User
 from app.schemas import EventCreate, EventUpdate, EventResponse, EventListResponse
 from app.routes.auth import get_current_user
-from datetime import datetime, timedelta
+from app.notifications_service import (
+    sync_admin_pending_notifications,
+    notify_event_status,
+    cleanup_favorite_near_for_event,
+)
+from datetime import datetime, timedelta, timezone
 
 
-async def get_current_user_optional(authorization: str = None):
+async def get_current_user_optional(authorization: str = Header(None)):
     """Igual que get_current_user pero devuelve None si no hay token."""
     if not authorization:
         return None
@@ -20,6 +25,11 @@ async def get_current_user_optional(authorization: str = None):
         return None
 
 router = APIRouter(prefix="/events", tags=["Events"])
+
+ARG_TZ = timezone(timedelta(hours=-3))
+
+def arg_now():
+    return datetime.now(ARG_TZ).replace(tzinfo=None)
 
 
 @router.get("/", response_model=List[EventListResponse])
@@ -53,14 +63,14 @@ async def list_events(
         filters.append(Event.is_outdoor == True)
 
     if today and today.lower() in ('true', '1'):
-        now = datetime.utcnow()
+        now = arg_now()
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
         today_end = today_start + timedelta(days=1)
         filters.append(Event.date >= today_start)
         filters.append(Event.date < today_end)
 
     if weekend and weekend.lower() in ('true', '1'):
-        now = datetime.utcnow()
+        now = arg_now()
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
         week_end = today_start + timedelta(days=(6 - today_start.weekday()))
         week_start = week_end - timedelta(days=2)
@@ -137,7 +147,7 @@ async def list_events(
     result = []
     for e in events:
         d = {
-            'id': e.id, 'title': e.title, 'date': e.date,
+            'id': e.id, 'title': e.title, 'date': e.date, 'end_date': e.end_date,
             'location': e.location, 'category': e.category,
             'moods': e.moods, 'cover_image': e.cover_image,
             'images': e.images,
@@ -182,7 +192,7 @@ async def get_my_events(current_user: User = Depends(get_current_user)):
     events = await Event.find(Event.created_by == current_user.uid).sort("-date").to_list()
     return [
         {
-            'id': e.id, 'title': e.title, 'date': e.date,
+            'id': e.id, 'title': e.title, 'date': e.date, 'end_date': e.end_date,
             'location': e.location, 'category': e.category,
             'moods': e.moods, 'cover_image': e.cover_image,
             'images': e.images,
@@ -225,6 +235,7 @@ async def create_event(
         title=event_create.title,
         description=event_create.description,
         date=event_create.date,
+        end_date=event_create.end_date,
         location=event_create.location.model_dump(),
         category=[event_create.category.value],
         moods=event_create.moods,
@@ -235,9 +246,10 @@ async def create_event(
         is_outdoor=event_create.is_outdoor,
         status="pending",
         created_by=current_user.uid if current_user else "anonymous",
-        author_name=current_user.display_name or "Usuario"
+        author_name=(current_user.display_name or "Usuario") if current_user else "Usuario Anónimo"
     )
     await new_event.create()
+    await sync_admin_pending_notifications()
     return new_event
 
 
@@ -249,6 +261,8 @@ async def approve_event(event_id: str):
         raise HTTPException(status_code=404, detail="Event not found")
     event.status = "approved"
     await event.save()
+    await notify_event_status(event, "approved")
+    await sync_admin_pending_notifications()
     return event
 
 
@@ -260,6 +274,8 @@ async def reject_event(event_id: str):
         raise HTTPException(status_code=404, detail="Event not found")
     event.status = "rejected"
     await event.save()
+    await notify_event_status(event, "rejected")
+    await sync_admin_pending_notifications()
     return event
 
 
@@ -270,6 +286,8 @@ async def delete_event(event_id: str):
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
     await event.delete()
+    await sync_admin_pending_notifications()
+    await cleanup_favorite_near_for_event(event.id)
 
 
 @router.put("/{event_id}", response_model=EventResponse)
@@ -293,6 +311,8 @@ async def update_event(
         event.description = update_data['description']
     if 'date' in update_data:
         event.date = update_data['date']
+    if 'end_date' in update_data:
+        event.end_date = update_data['end_date']
     if 'location' in update_data:
         event.location = update_data['location'].model_dump() if hasattr(update_data['location'], 'model_dump') else update_data['location']
     if 'category' in update_data:

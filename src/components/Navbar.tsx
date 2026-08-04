@@ -9,9 +9,10 @@
 // React
 import React, { useState } from 'react';
 
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../hooks/useAuth';
+import { useNotifications } from '../hooks/useNotifications';
 
 import { Button } from '@/components/ui/button';
 
@@ -32,7 +33,7 @@ import {
 } from 'lucide-react';
 
 import { MOODS } from '../lib/moods';
-import { cn } from '@/lib/utils';
+import { cn, formatRelativeTime, formatCountdown } from '@/lib/utils';
 import { useMood } from '../contexts/MoodContext';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -64,6 +65,8 @@ export const Navbar: React.FC = () => {
   
   const { mood: activeMood, setMood: setContextMood, clearMood } = useMood();
   const { dark, toggle: toggleTheme } = useTheme();
+  const { notifications, unreadCount, markRead, markAllRead, refresh } = useNotifications();
+  const navigate = useNavigate();
 
   // Estados para dialogs de auth
   const [loginOpen, setLoginOpen] = useState(false);
@@ -76,6 +79,12 @@ export const Navbar: React.FC = () => {
 
   // Handler de logout
   const handleLogout = () => logout();
+
+  // Handler al clickear una notificación
+  const handleNotificationClick = (notification: any) => {
+    if (!notification.read) markRead(notification.id);
+    if (notification.link) navigate(notification.link);
+  };
 
   // Handler de login con Google (no usado actualmente)
   const handleGoogleLogin = async () => {
@@ -165,10 +174,57 @@ export const Navbar: React.FC = () => {
               // Usuario logueado
               <div className="flex items-center gap-3">
                 {/* Botón de notificaciones */}
-                <Button variant="ghost" size="icon" className="relative">
-                  <Bell size={20} className="text-slate-600 dark:text-slate-300" />
-                  <span className="absolute top-2 right-2 flex h-2 w-2 rounded-full bg-primary"></span>
-                </Button>
+                <DropdownMenu onOpenChange={(open) => { if (open) refresh(); }}>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="relative">
+                      <Bell size={20} className="text-slate-600 dark:text-slate-300" />
+                      {unreadCount > 0 && (
+                        <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
+                      )}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-80 max-h-[70vh] overflow-y-auto">
+                    <DropdownMenuLabel>Notificaciones</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {notifications.length === 0 ? (
+                      <div className="py-8 text-center text-sm text-slate-500 dark:text-slate-400">
+                        No tenés notificaciones
+                      </div>
+                    ) : (
+                      notifications.map((n) => (
+                        <DropdownMenuItem
+                          key={n.id}
+                          onClick={() => handleNotificationClick(n)}
+                          className="flex flex-col items-start gap-0.5 cursor-pointer"
+                        >
+                          <div className="flex w-full items-center gap-2">
+                            {!n.read && <span className="h-2 w-2 shrink-0 rounded-full bg-primary" />}
+                            <span className="text-sm font-medium">{n.title}</span>
+                            <span className="ml-auto text-xs text-slate-400 dark:text-slate-500">
+                              {formatRelativeTime(n.created_at)}
+                            </span>
+                          </div>
+                          <span className="text-xs text-slate-500 dark:text-slate-400">{n.message}</span>
+                          {n.type === 'favorite_near' && n.event_date && (
+                            <span className="text-xs font-medium text-primary">
+                              {formatCountdown(n.event_date)}
+                            </span>
+                          )}
+                        </DropdownMenuItem>
+                      ))
+                    )}
+                    {notifications.length > 0 && unreadCount > 0 && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={markAllRead} className="justify-center text-xs text-primary">
+                          Marcar todas como leídas
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 
                 {/* Dropdown con menu */}
                 <DropdownMenu>

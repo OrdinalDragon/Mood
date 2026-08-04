@@ -33,6 +33,7 @@ import { ResetPassword } from './pages/ResetPassword';
 import { ContactPage } from './pages/ContactPage';
 import { CategoriesPage } from './pages/CategoriesPage';
 import { AboutMoodsPage } from './pages/AboutMoodsPage';
+import { QuienesSomosPage } from './pages/QuienesSomosPage';
 import { FavoritesPage } from './pages/FavoritesPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { EventCard } from '@/components/EventCard';
@@ -48,7 +49,7 @@ import { useEffect, useState, useRef } from 'react';
 
 // API del backend
 import { getEvents } from './lib/api';
-import { getEventImage } from './lib/utils';
+import { getEventImage, parseEventDate } from './lib/utils';
 
 // Tipos locales
 import { Event } from './types';
@@ -164,6 +165,20 @@ function HomePage() {
   //     </button>
   //   );
   // });
+  const nowMs = Date.now();
+  const recommendedEvents = events
+    .filter(event => !contextMood || (event.moods && event.moods.includes(contextMood)))
+    .map(event => ({ event, t: parseEventDate(event.date)?.getTime() ?? 0 }))
+    .filter(x => x.t > 0)
+    .sort((a, b) => {
+      const aUpcoming = a.t >= nowMs ? 0 : 1;
+      const bUpcoming = b.t >= nowMs ? 0 : 1;
+      if (aUpcoming !== bUpcoming) return aUpcoming - bUpcoming;
+      return aUpcoming === 0 ? a.t - b.t : b.t - a.t;
+    })
+    .slice(0, 4)
+    .map(x => x.event);
+
   const moodCards = MOODS.map((mood, index) => {
     const isActive = contextMood === mood.id;
     // Si es el último elemento (índice 4), le aplicamos clases especiales para mobile
@@ -246,12 +261,9 @@ function HomePage() {
             </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {events
-                .filter(event => !contextMood || (event.moods && event.moods.includes(contextMood)))
-                .slice(0, 4)
-                .map((event) => (
-                  <EventCard key={event.id} event={event} />
-                ))}
+              {recommendedEvents.map((event) => (
+                <EventCard key={event.id} event={event} />
+              ))}
             </div>
           </div>
           
@@ -664,7 +676,7 @@ function MapPage() {
                         </div>
                       )}
                       <div className="flex items-center gap-2 text-[11px] text-slate-400 dark:text-slate-500">
-                        <span>{(() => { const d = new Date(event.date); return isNaN(d.getTime()) ? '' : d.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' }); })()}</span>
+                        <span>{(() => { const d = parseEventDate(event.date); return !d || isNaN(d.getTime()) ? '' : d.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' }); })()}</span>
                         {distance !== undefined && (
                           <span className="flex items-center gap-0.5">
                             <MapPin size={10} /> {distance} km
@@ -739,7 +751,7 @@ function MapPage() {
                     <div className="space-y-1.5 text-sm text-slate-500 dark:text-slate-400">
                       <div className="flex items-center gap-2">
                         <Calendar size={14} className="flex-shrink-0" />
-                        <span>{(() => { const d = new Date(selectedEvent.date); return isNaN(d.getTime()) ? '' : d.toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' }); })()}</span>
+                        <span>{(() => { const d = parseEventDate(selectedEvent.date); return !d || isNaN(d.getTime()) ? '' : d.toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' }); })()}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <MapPin size={14} className="flex-shrink-0" />
@@ -809,6 +821,7 @@ export default function App() {
             <Route path="/favorites" element={<FavoritesPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/about-moods" element={<AboutMoodsPage />} />
+            <Route path="/quienes-somos" element={<QuienesSomosPage />} />
             <Route path="/contact" element={<ContactPage />} />
             <Route path="/terminos-y-condiciones" element={<TerminosYCondiciones />} />
             <Route path="/verify-email" element={<VerifyEmail />} />
@@ -854,6 +867,7 @@ export default function App() {
                   <ul className="space-y-2 text-sm text-slate-400">
                     <li><Link to="/submit" className="hover:text-white transition-colors">Subir Evento</Link></li>
                     <li><Link to="/contact" className="hover:text-white transition-colors">Contacto</Link></li>
+                    <li><Link to="/quienes-somos" className="hover:text-white transition-colors">Quiénes somos</Link></li>
                     <li><Link to="/terminos-y-condiciones" className="hover:text-white transition-colors">Términos y Condiciones</Link></li>
                   </ul>
                 </div>

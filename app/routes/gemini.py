@@ -21,10 +21,12 @@ Contexto actual del usuario:
 Reglas:
 - Responder en español, tono amigable y conciso
 - Usar las funciones disponibles cuando necesites datos o acciones
-- Si el usuario pide cambiar el mood, usa set_user_mood
-- Si busca eventos, usa search_events con los filtros adecuados
+- Si el usuario expresa cómo se siente o qué busca (tranquilo, relajado, etc.), SIEMPRE llamá set_user_mood PRIMERO para cambiar su mood, y luego search_events
+- No combines mood con category en search_events — usá uno u otro, o dejá category vacío
+- Después de ejecutar funciones, SIEMPRE respondé con un texto final recomendando eventos o dando información útil
 - Recomendar máximo 3-4 eventos relevantes
-- No inventar eventos que no existan"""
+- No inventar eventos que no existan
+- Si search_events no encuentra resultados, informá al usuario amablemente y sugerí buscar en otra zona o con otros filtros"""
 
 FUNCTION_DECLARATIONS = [
     {
@@ -126,10 +128,14 @@ class TextResponse(BaseModel):
     content: str
 
 
-class FunctionCallResponse(BaseModel):
-    type: str = "function_call"
+class FunctionCallItem(BaseModel):
     name: str
     args: dict[str, Any]
+
+
+class FunctionCallsResponse(BaseModel):
+    type: str = "function_calls"
+    calls: List[FunctionCallItem]
 
 
 @router.post("/chat")
@@ -165,15 +171,22 @@ async def gemini_chat(request: ChatRequest):
 
         response = model.generate_content(contents)
 
+        function_calls = []
+        text_parts = []
         for part in response.candidates[0].content.parts:
             if part.function_call:
                 fc = part.function_call
-                return FunctionCallResponse(
+                function_calls.append(FunctionCallItem(
                     name=fc.name,
                     args=dict(fc.args.items())
-                )
+                ))
+            elif part.text:
+                text_parts.append(part.text)
 
-        return TextResponse(content=response.text)
+        if function_calls:
+            return FunctionCallsResponse(calls=function_calls)
+
+        return TextResponse(content="".join(text_parts))
 
     except Exception as e:
         raise HTTPException(

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Header, Response
-from app.models import User
+from app.models import User, BannedEmail
 from app.schemas import UserResponse
 from app.email import send_verification_email, send_reset_password_email
 from datetime import datetime, timedelta
@@ -18,6 +18,11 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 SECRET_KEY = os.getenv("JWT_SECRET", "change-me-in-production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
+
+
+async def is_email_banned(email: str) -> bool:
+    banned = await BannedEmail.find_one(BannedEmail.email == email.strip().lower())
+    return banned is not None
 
 
 class RegisterRequest(BaseModel):
@@ -134,14 +139,17 @@ async def get_current_user(authorization: str = Header(None)):
 
 @router.post("/register")
 async def register(data: RegisterRequest):
-    existing = await User.find_one(User.email == data.email)
+    email_norm = data.email.strip().lower()
+    if await is_email_banned(email_norm):
+        raise HTTPException(status_code=403, detail="Esta cuenta fue baneada. No podés volver a registrarte con este email.")
+    existing = await User.find_one(User.email == email_norm)
     if existing:
         raise HTTPException(status_code=400, detail="El correo ya está registrado")
     import uuid
     verification_token = str(uuid.uuid4())
     new_user = await User(
         uid=str(uuid.uuid4()),
-        email=data.email,
+        email=email_norm,
         display_name=data.display_name,
         role="user",
         password_hash=hash_password(data.password),
@@ -159,7 +167,10 @@ async def register(data: RegisterRequest):
 
 @router.post("/login")
 async def login(data: LoginRequest):
-    user = await User.find_one(User.email == data.email)
+    email_norm = data.email.strip().lower()
+    if await is_email_banned(email_norm):
+        raise HTTPException(status_code=403, detail="Esta cuenta fue baneada. Contactate con soporte.")
+    user = await User.find_one(User.email == email_norm)
     if not user or not verify_password(data.password, user.password_hash or ""):
         raise HTTPException(status_code=401, detail="Credenciales inválidas")
     if user.email_verified == "0":
@@ -302,6 +313,8 @@ async def get_users(current_user: User = Depends(get_current_user)):
             "email_verified": u.email_verified,
             "auth_provider": u.auth_provider,
             "google_id": u.google_id,
+            "banned": u.banned,
+            "banned_at": u.banned_at,
         }
         for u in users
     ]
@@ -323,6 +336,83 @@ async def update_user_role(uid: str, data: UpdateRoleRequest, current_user: User
     user.role = data.role
     await user.save()
     return {"message": f"Rol actualizado a {data.role}", "uid": uid, "role": data.role}
+
+
+@router.delete("/users/{uid}", status_code=204)
+async def delete_user(uid: str, current_user: User = Depends(get_current_user)):
+    """Elimina un usuario definitivamente. Solo admins."""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Se requieren permisos de administrador")
+    if current_user.uid == uid:
+        raise HTTPException(status_code=400, detail="No podés eliminar tu propia cuenta")
+    user = await User.find_one(User.uid == uid)
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    await user.delete()
+    return Response(status_code=204)
+
+
+@router.post("/users/{uid}/ban")
+async def ban_user(uid: str, current_user: User = Depends(get_current_user)):
+    """Banea un usuario: no podrá iniciar sesión ni volver a registrarse con su email."""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Se requieren permisos de administrador")
+    if current_user.uid == uid:
+        raise HTTPException(status_code=400, detail="No podés banearte a vos mismo")
+    user = await User.find_one(User.uid == uid)
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    email_norm = user.email.strip().lower()
+    existing = await BannedEmail.find_one(BannedEmail.email == email_norm)
+    if not existing:
+        await BannedEmail(
+            email=email_norm,
+            display_name=user.display_name,
+            banned_at=datetime.utcnow(),
+            banned_by=current_user.uid,
+        ).create()
+    user.banned = True
+    user.banned_at = datetime.utcnow()
+    await user.save()
+    return {"message": "Usuario baneado", "uid": uid, "email": user.email}
+
+
+@router.get("/bans", response_model=list)
+async def get_bans(current_user: User = Depends(get_current_user)):
+    """Lista los emails baneados. Solo admins."""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Se requieren permisos de administrador")
+    bans = await BannedEmail.find_all().sort(-BannedEmail.banned_at).to_list()
+    return [
+        {
+            "email": b.email,
+            "display_name": b.display_name,
+            "banned_at": b.banned_at,
+            "banned_by": b.banned_by,
+        }
+        for b in bans
+    ]
+
+
+class UnbanRequest(BaseModel):
+    email: str
+
+
+@router.post("/bans/unban")
+async def unban_user(data: UnbanRequest, current_user: User = Depends(get_current_user)):
+    """Desbanea un email: vuelve a poder registrarse/iniciar sesión."""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Se requieren permisos de administrador")
+    email_norm = data.email.strip().lower()
+    banned = await BannedEmail.find_one(BannedEmail.email == email_norm)
+    if banned:
+        await banned.delete()
+    user = await User.find_one(User.email == email_norm)
+    if user:
+        user.banned = False
+        user.banned_at = None
+        await user.save()
+    return {"message": "Email desbaneado", "email": email_norm}
 
 
 @router.get("/csrf-token")

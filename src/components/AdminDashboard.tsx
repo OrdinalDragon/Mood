@@ -14,10 +14,10 @@
 import React, { useEffect, useState } from 'react';
 
 // API
-import { getPendingEvents, approveEvent, rejectEvent, deleteEvent, updateEvent, uploadImage, getUsers, updateUserRole, getAdsAdmin, createAd, updateAd, deleteAd } from '../lib/api';
+import { getPendingEvents, approveEvent, rejectEvent, deleteEvent, updateEvent, uploadImage, getUsers, updateUserRole, deleteUser, banUser, getBans, unbanUser, getAdsAdmin, createAd, updateAd, deleteAd } from '../lib/api';
 
 // Tipos
-import { Event, UserAdmin, Ad } from '../types';
+import { Event, UserAdmin, Ad, Ban } from '../types';
 
 // UI Components
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,13 +30,18 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 
 // Iconos
-import { Check, X, Trash2, ExternalLink, Pencil, MapPin, Upload, ImagePlus, Users, Calendar, Megaphone, Plus } from 'lucide-react';
+import { Check, X, Trash2, ExternalLink, Pencil, MapPin, Upload, ImagePlus, Users, Calendar, Megaphone, Plus, Hammer, Ban as BanIcon, ShieldOff } from 'lucide-react';
 
 // Utils
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { toast } from 'sonner';
-import { getEventImage } from '../lib/utils';
+import { getEventImage, parseEventDate, toLocalDatetimeString } from '../lib/utils';
+
+
+// ============================================================
+// HELPERS
+// ============================================================
 
 
 // ============================================================
@@ -67,7 +72,7 @@ const ROLE_COLORS: Record<string, string> = {
 
 export const AdminDashboard: React.FC = () => {
   // ---- ESTADOS ----
-  const [tab, setTab] = useState<'events' | 'users' | 'ads'>('events');
+  const [tab, setTab] = useState<'events' | 'users' | 'bans' | 'ads'>('events');
 
   // Eventos
   const [pendingEvents, setPendingEvents] = useState<Event[]>([]);
@@ -87,6 +92,10 @@ export const AdminDashboard: React.FC = () => {
   const [adDialogOpen, setAdDialogOpen] = useState(false);
   const [editingAd, setEditingAd] = useState<Ad | null>(null);
   const [adForm, setAdForm] = useState<Partial<Ad>>({});
+
+  // Bans
+  const [bans, setBans] = useState<Ban[]>([]);
+  const [bansLoading, setBansLoading] = useState(false);
 
   // ---- EFFECT: CARGAR EVENTOS ----
   useEffect(() => {
@@ -121,6 +130,23 @@ export const AdminDashboard: React.FC = () => {
     if (tab === 'users') loadUsers();
   }, [tab]);
 
+  // ---- CARGAR BANS ----
+  const loadBans = async () => {
+    setBansLoading(true);
+    try {
+      const data = await getBans();
+      setBans(data);
+    } catch (error) {
+      toast.error('Error al cargar los baneos');
+    } finally {
+      setBansLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (tab === 'bans') loadBans();
+  }, [tab]);
+
   // ---- CARGAR ANUNCIOS ----
   const loadAds = async () => {
     setAdsLoading(true);
@@ -140,7 +166,7 @@ export const AdminDashboard: React.FC = () => {
 
   const openNewAdDialog = () => {
     setEditingAd(null);
-    setAdForm({ title: '', badge: 'Exposición MOOD', subtitle: '', description: '', cta_text: 'Ver más', active: true, order: ads.length });
+    setAdForm({ title: '', badge: 'Exposición MOOD', subtitle: '', description: '', cta_text: 'Ver más', active: true, order: ads.length, hero: false });
     setAdDialogOpen(true);
   };
 
@@ -165,13 +191,18 @@ export const AdminDashboard: React.FC = () => {
         badge: adForm.badge || null,
         subtitle: adForm.subtitle || null,
         description: adForm.description || null,
-        date: adForm.date ? new Date(adForm.date).toISOString() : null,
+        date: adForm.date || null,
         location: adForm.location || null,
         cta_text: adForm.cta_text || 'Ver más',
         cta_link: adForm.cta_link || null,
         image: adForm.image || null,
         active: adForm.active ?? true,
         order: adForm.order ?? 0,
+        hero: adForm.hero ?? false,
+        icon: adForm.icon || null,
+        gradient: adForm.gradient || null,
+        badge_color: adForm.badge_color || null,
+        footer: adForm.footer || null,
       };
       if (editingAd) {
         await updateAd(editingAd.id, payload);
@@ -254,6 +285,7 @@ export const AdminDashboard: React.FC = () => {
       title: event.title,
       description: event.description,
       date: event.date,
+      end_date: event.end_date,
       category: Array.isArray(event.category) ? event.category[0] : event.category,
       moods: event.moods,
       is_free: event.is_free,
@@ -318,6 +350,41 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
+  const handleDeleteUser = async (user: UserAdmin) => {
+    if (!window.confirm(`¿Eliminar definitivamente a "${user.email}"? Esta acción no se puede deshacer.`)) return;
+    try {
+      await deleteUser(user.uid);
+      setUsers(prev => prev.filter(u => u.uid !== user.uid));
+      toast.success('Usuario eliminado');
+    } catch (error) {
+      toast.error('Error al eliminar usuario');
+    }
+  };
+
+  const handleBanUser = async (user: UserAdmin) => {
+    if (!window.confirm(`¿Banear a "${user.email}"? No podrá iniciar sesión ni volver a registrarse.`)) return;
+    try {
+      await banUser(user.uid);
+      setUsers(prev => prev.map(u => u.uid === user.uid ? { ...u, banned: true, banned_at: new Date() } : u));
+      toast.success('Usuario baneado');
+      loadBans();
+    } catch (error) {
+      toast.error('Error al banear usuario');
+    }
+  };
+
+  const handleUnbanUser = async (ban: Ban) => {
+    if (!window.confirm(`¿Desbanear "${ban.email}"?`)) return;
+    try {
+      await unbanUser(ban.email);
+      setBans(prev => prev.filter(b => b.email !== ban.email));
+      setUsers(prev => prev.map(u => u.email === ban.email ? { ...u, banned: false, banned_at: null } : u));
+      toast.success('Email desbaneado');
+    } catch (error) {
+      toast.error('Error al desbanear');
+    }
+  };
+
   // ---- RENDER ----
   return (
     <div className="container mx-auto py-10 px-4">
@@ -378,6 +445,20 @@ export const AdminDashboard: React.FC = () => {
             <Badge className="ml-1 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs px-1.5 py-0">{ads.length}</Badge>
           )}
         </button>
+        <button
+          onClick={() => setTab('bans')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${
+            tab === 'bans'
+              ? 'bg-primary/10 text-primary border-b-2 border-primary'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+          }`}
+        >
+          <BanIcon size={16} />
+          Bans
+          {bans.length > 0 && (
+            <Badge className="ml-1 bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-300 text-xs px-1.5 py-0">{bans.length}</Badge>
+          )}
+        </button>
       </div>
 
       {/* ---- TAB: EVENTOS ---- */}
@@ -426,7 +507,7 @@ export const AdminDashboard: React.FC = () => {
                       </h3>
                     </div>
                     <div className="text-right text-sm text-slate-500 dark:text-slate-400">
-                      {format(new Date(event.date), "PPP", { locale: es })}
+                      {format(parseEventDate(event.date), "PPP", { locale: es })}
                     </div>
                   </div>
                   
@@ -506,6 +587,8 @@ export const AdminDashboard: React.FC = () => {
                       <th className="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-300">Registro</th>
                       <th className="text-center px-4 py-3 font-semibold text-slate-600 dark:text-slate-300">Verificado</th>
                       <th className="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-300">Auth</th>
+                      <th className="text-center px-4 py-3 font-semibold text-slate-600 dark:text-slate-300">Estado</th>
+                      <th className="text-center px-4 py-3 font-semibold text-slate-600 dark:text-slate-300">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -540,8 +623,92 @@ export const AdminDashboard: React.FC = () => {
                           )}
                         </td>
                         <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-xs capitalize">{user.auth_provider}</td>
+                        <td className="px-4 py-3 text-center">
+                          {user.banned ? (
+                            <Badge className="bg-red-100 text-red-700 border-red-200 text-xs">Baneado</Badge>
+                          ) : (
+                            <Badge className="bg-green-100 text-green-700 border-green-200 text-xs">Activo</Badge>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => handleBanUser(user)}
+                              disabled={user.banned}
+                              title={user.banned ? 'Ya está baneado' : 'Banear usuario'}
+                              className="p-1.5 rounded-md text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                              <Hammer size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteUser(user)}
+                              title="Eliminar usuario"
+                              className="p-1.5 rounded-md text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        </>
+      )}
+
+      {/* ---- TAB: BANS ---- */}
+      {tab === 'bans' && (
+        <>
+        {bansLoading ? (
+          <div className="flex justify-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          </div>
+        ) : (
+          <Card>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+                      <th className="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-300">Email</th>
+                      <th className="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-300">Nombre</th>
+                      <th className="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-300">Baneado el</th>
+                      <th className="text-center px-4 py-3 font-semibold text-slate-600 dark:text-slate-300">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {bans.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="px-4 py-12 text-center text-slate-400">
+                          No hay usuarios baneados.
+                        </td>
+                      </tr>
+                    ) : (
+                      bans.map((ban) => (
+                        <tr key={ban.email} className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/30">
+                          <td className="px-4 py-3 text-slate-900 dark:text-white">{ban.email}</td>
+                          <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{ban.display_name || '—'}</td>
+                          <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-xs">
+                            {ban.banned_at ? format(new Date(ban.banned_at), 'P', { locale: es }) : '—'}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleUnbanUser(ban)}
+                              className="text-blue-600 border-blue-200 hover:bg-blue-50 dark:text-blue-400 dark:border-blue-900 dark:hover:bg-blue-900/20"
+                            >
+                              <ShieldOff size={14} className="mr-1" />
+                              Desbanear
+                            </Button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -589,8 +756,11 @@ export const AdminDashboard: React.FC = () => {
                       {ad.badge && (
                         <Badge className="absolute top-2 left-2 bg-primary text-primary-foreground border-0 text-xs">{ad.badge}</Badge>
                       )}
+                      {ad.hero && (
+                        <Badge className="absolute top-2 right-2 bg-fuchsia-600 text-white border-0 text-xs">⭐ Hero</Badge>
+                      )}
                       {!ad.active && (
-                        <Badge className="absolute top-2 right-2 bg-slate-800 text-white border-0 text-xs">Inactivo</Badge>
+                        <Badge className="absolute top-8 right-2 bg-slate-800 text-white border-0 text-xs">Inactivo</Badge>
                       )}
                       <div className="absolute bottom-0 left-0 right-0 p-3">
                         <p className="text-primary-foreground/80 text-xs uppercase tracking-wide">{ad.subtitle}</p>
@@ -601,7 +771,7 @@ export const AdminDashboard: React.FC = () => {
                       <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{ad.description}</p>
                       <div className="flex flex-wrap gap-4 text-xs text-slate-500 mb-3">
                         {ad.date && (
-                          <span>📅 {format(new Date(ad.date), "d 'de' MMMM", { locale: es })}</span>
+                          <span>📅 {format(parseEventDate(ad.date), "d 'de' MMMM", { locale: es })}</span>
                         )}
                         {ad.location && <span>📍 {ad.location}</span>}
                         <span className="ml-auto">Orden: {ad.order}</span>
@@ -665,8 +835,16 @@ export const AdminDashboard: React.FC = () => {
                 <Label>Fecha</Label>
                 <Input 
                   type="datetime-local"
-                  value={editForm.date ? new Date(editForm.date as string).toISOString().slice(0, 16) : ''}
-                  onChange={e => handleEditField('date', new Date(e.target.value).toISOString())}
+                  value={toLocalDatetimeString(editForm.date as string)}
+                  onChange={e => handleEditField('date', e.target.value || null)}
+                />
+              </div>
+              <div>
+                <Label>Fin (opcional)</Label>
+                <Input 
+                  type="datetime-local"
+                  value={toLocalDatetimeString(editForm.end_date as string)}
+                  onChange={e => handleEditField('end_date', e.target.value || null)}
                 />
               </div>
               <div>
@@ -693,10 +871,10 @@ export const AdminDashboard: React.FC = () => {
               <div>
                 <Label>Estados de ánimo</Label>
                 <div className="flex flex-wrap gap-2 mt-1">
-                  {['alegre','triste','energetico','reservado','romantico','estresado'].map(mId => {
+                  {['alegre','triste','enojado','tranquilo','reservado'].map(mId => {
                     const labels: Record<string,string> = {
-                      alegre: '😊 Alegre', triste: '😢 Triste', energetico: '⚡ Enérgico',
-                      reservado: '😐 Reservado', romantico: '💕 Romántico', estresado: '😫 Estresado'
+                      alegre: '😊 Alegre', triste: '😢 Triste', enojado: '😠 Enojado',
+                      tranquilo: '😌 Tranquilo', reservado: '😐 Reservado'
                     };
                     const selected = ((editForm.moods as string[]) || []).includes(mId);
                     return (
@@ -918,7 +1096,7 @@ export const AdminDashboard: React.FC = () => {
               <Input
                 value={adForm.title || ''}
                 onChange={e => handleAdField('title', e.target.value)}
-                placeholder="Ej: ¡Martes 9 de Junio!"
+                placeholder="Ej: ¡Martes 4 de Agosto!"
               />
             </div>
             <div>
@@ -951,8 +1129,8 @@ export const AdminDashboard: React.FC = () => {
                 <Label>Fecha</Label>
                 <Input
                   type="datetime-local"
-                  value={adForm.date ? new Date(adForm.date as string).toISOString().slice(0, 16) : ''}
-                  onChange={e => handleAdField('date', e.target.value ? new Date(e.target.value).toISOString() : null)}
+                  value={toLocalDatetimeString(adForm.date as string)}
+                  onChange={e => handleAdField('date', e.target.value || null)}
                 />
               </div>
               <div>
@@ -1029,6 +1207,76 @@ export const AdminDashboard: React.FC = () => {
                     />
                   </label>
                 )}
+              </div>
+            </div>
+            <div className="border-t pt-4 mt-2">
+              <Label className="text-base font-semibold mb-3 block">Configuración del Hero</Label>
+              <label className="flex items-center gap-2 cursor-pointer mb-4">
+                <input
+                  type="checkbox"
+                  checked={adForm.hero ?? false}
+                  onChange={e => handleAdField('hero', e.target.checked)}
+                  className="w-5 h-5 rounded border-slate-300 text-primary focus:ring-primary"
+                />
+                <span className="text-sm font-medium text-slate-700">Mostrar en el Hero (la página principal)</span>
+              </label>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label>Ícono (emoji)</Label>
+                  <Input
+                    value={adForm.icon || ''}
+                    onChange={e => handleAdField('icon', e.target.value)}
+                    placeholder="Ej: 🚀"
+                  />
+                </div>
+                <div>
+                  <Label>Gradiente del card</Label>
+                  <Select
+                    value={adForm.gradient || ''}
+                    onValueChange={v => handleAdField('gradient', v || null)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Elegí un color" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="blue">Azul</SelectItem>
+                      <SelectItem value="purple">Púrpura</SelectItem>
+                      <SelectItem value="emerald">Esmeralda</SelectItem>
+                      <SelectItem value="rose">Rosa</SelectItem>
+                      <SelectItem value="violet">Violeta</SelectItem>
+                      <SelectItem value="orange">Naranja</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Color del badge</Label>
+                  <Select
+                    value={adForm.badge_color || ''}
+                    onValueChange={v => handleAdField('badge_color', v || null)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Elegí un color" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="emerald">Esmeralda</SelectItem>
+                      <SelectItem value="blue">Azul</SelectItem>
+                      <SelectItem value="purple">Púrpura</SelectItem>
+                      <SelectItem value="rose">Rosa</SelectItem>
+                      <SelectItem value="violet">Violeta</SelectItem>
+                      <SelectItem value="orange">Naranja</SelectItem>
+                      <SelectItem value="red">Rojo</SelectItem>
+                      <SelectItem value="yellow">Amarillo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="mt-4">
+                <Label>Texto del pie del card (opcional)</Label>
+                <Input
+                  value={adForm.footer || ''}
+                  onChange={e => handleAdField('footer', e.target.value)}
+                  placeholder="Ej: Martes 4 de Agosto · Entrada gratuita"
+                />
               </div>
             </div>
             <label className="flex items-center gap-2 cursor-pointer">

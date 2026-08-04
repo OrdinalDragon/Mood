@@ -34,7 +34,7 @@ import { useAuth } from '../hooks/useAuth';
 import { addFavorite, removeFavorite } from '../lib/api';
 
 // Utilidades
-import { getEventImage } from '../lib/utils';
+import { getEventImage, parseEventDate } from '../lib/utils';
 
 // Toasts
 import { toast } from 'sonner';
@@ -155,19 +155,8 @@ const getCategoryColor = (cat: string): string => {
           <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
             <Calendar size={12} />
             {(() => {
-              let d: Date;
-              if (!event.date) {
-                return 'Fecha no disponible';
-              }
-              if (event.date?.toDate) {
-                d = event.date.toDate();
-              } else if (typeof event.date === 'string') {
-                d = new Date(event.date);
-              } else if (event.date instanceof Date) {
-                d = event.date;
-              } else {
-                return 'Fecha no disponible';
-              }
+              const d = parseEventDate(event.date);
+              if (!d) return 'Fecha no disponible';
               return isNaN(d.getTime()) ? 'Fecha no disponible' : format(d, "EEEE d 'de' MMM", { locale: es });
             })()}
           </div>

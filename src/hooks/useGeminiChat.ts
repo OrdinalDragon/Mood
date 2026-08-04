@@ -10,6 +10,7 @@ export interface ChatMessage {
   role: 'user' | 'model' | 'function';
   content: string;
   name?: string;
+  done?: boolean;
 }
 
 interface UseGeminiChatOptions {
@@ -96,59 +97,115 @@ export function useGeminiChat({ currentMood, location }: UseGeminiChatOptions = 
         rounds++;
         const response = await sendToBackend(history);
 
-        if (response.type === 'function_call') {
-          const toolMsg: ChatMessage = {
-            role: 'function',
-            content: `Ejecutando: ${response.name}`,
-            name: response.name,
-          };
-          addMessage(toolMsg);
-          history = [...history, toolMsg];
+        const calls: { name: string; args: Record<string, any> }[] = [];
 
-          if (response.name === 'set_user_mood') {
-            setPendingAction({ action: 'set_user_mood', args: response.args });
-            setIsLoading(false);
-            return;
-          }
-          if (response.name === 'clear_user_mood') {
-            setPendingAction({ action: 'clear_user_mood', args: {} });
-            setIsLoading(false);
-            return;
-          }
-
-          const fn = FUNCTION_MAP[response.name];
-          if (!fn) {
-            const result = `Función "${response.name}" no encontrada`;
-            const resultMsg: ChatMessage = { role: 'function', content: result, name: response.name };
-            addMessage(resultMsg);
-            history = [...history, resultMsg];
-            continue;
-          }
-
-          const result = await fn(response.args);
-          const resultMsg: ChatMessage = { role: 'function', content: result, name: response.name };
-          addMessage(resultMsg);
-          history = [...history, resultMsg];
-
+        if (response.type === 'function_calls' && response.calls?.length) {
+          calls.push(...response.calls);
+        } else if (response.type === 'function_call') {
+          calls.push({ name: response.name, args: response.args });
         } else if (response.type === 'text') {
-          const modelMsg: ChatMessage = { role: 'model', content: response.content };
-          addMessage(modelMsg);
-          setIsLoading(false);
+          addMessage({ role: 'model', content: response.content });
           return;
         } else {
           throw new Error('Respuesta inesperada del servidor');
         }
+
+        let specialAction: { action: string; args: Record<string, any> } | null = null;
+
+        for (const call of calls) {
+          addMessage({
+            role: 'function', content: call.name, name: call.name, done: false,
+          } as any);
+
+          if (call.name === 'set_user_mood') {
+            specialAction = { action: 'set_user_mood', args: call.args };
+            setMessages(prev => {
+              const updated = [...prev];
+              for (let i = updated.length - 1; i >= 0; i--) {
+                if (updated[i].role === 'function' && updated[i].name === call.name && !updated[i].done) {
+                  updated[i] = { ...updated[i], content: call.name, done: true };
+                  break;
+                }
+              }
+              return updated;
+            });
+            history = [...history, { role: 'function', content: JSON.stringify({ mood_id: call.args.mood_id }), name: call.name }];
+            continue;
+          }
+          if (call.name === 'clear_user_mood') {
+            specialAction = { action: 'clear_user_mood', args: {} };
+            setMessages(prev => {
+              const updated = [...prev];
+              for (let i = updated.length - 1; i >= 0; i--) {
+                if (updated[i].role === 'function' && updated[i].name === call.name && !updated[i].done) {
+                  updated[i] = { ...updated[i], content: call.name, done: true };
+                  break;
+                }
+              }
+              return updated;
+            });
+            history = [...history, { role: 'function', content: '{"cleared":true}', name: call.name }];
+            continue;
+          }
+
+          const fn = FUNCTION_MAP[call.name];
+          if (!fn) {
+            const errResult = `Función "${call.name}" no encontrada`;
+            setMessages(prev => {
+              const updated = [...prev];
+              for (let i = updated.length - 1; i >= 0; i--) {
+                if (updated[i].role === 'function' && updated[i].name === call.name && !updated[i].done) {
+                  updated[i] = { ...updated[i], content: errResult, done: true };
+                  break;
+                }
+              }
+              return updated;
+            });
+            history = [...history, { role: 'function', content: errResult, name: call.name }];
+            continue;
+          }
+
+          try {
+            const result = await fn(call.args);
+            setMessages(prev => {
+              const updated = [...prev];
+              for (let i = updated.length - 1; i >= 0; i--) {
+                if (updated[i].role === 'function' && updated[i].name === call.name && !updated[i].done) {
+                  updated[i] = { ...updated[i], content: result, done: true };
+                  break;
+                }
+              }
+              return updated;
+            });
+            history = [...history, { role: 'function', content: result, name: call.name }];
+          } catch (fnErr) {
+            const errResult = `Error al ejecutar ${call.name}`;
+            setMessages(prev => {
+              const updated = [...prev];
+              for (let i = updated.length - 1; i >= 0; i--) {
+                if (updated[i].role === 'function' && updated[i].name === call.name && !updated[i].done) {
+                  updated[i] = { ...updated[i], content: errResult, done: true };
+                  break;
+                }
+              }
+              return updated;
+            });
+            history = [...history, { role: 'function', content: errResult, name: call.name }];
+          }
+        }
+
+        if (specialAction) {
+          setPendingAction(specialAction);
+        }
       }
 
-      if (rounds >= MAX_ROUNDS) {
-        addMessage({ role: 'model', content: 'Lo siento, no pude completar la operación. Intenta de nuevo.' });
-      }
+      addMessage({ role: 'model', content: 'Encontré algunas opciones para vos. ¿Querés que te cuente más sobre alguno?' });
     } catch (err: any) {
       addMessage({ role: 'model', content: `Error: ${err.message || 'Error de conexión'}` });
     } finally {
-      if (!pendingAction) setIsLoading(false);
+      setIsLoading(false);
     }
-  }, [messages, isLoading, addMessage, sendToBackend, pendingAction]);
+  }, [messages, isLoading, addMessage, sendToBackend]);
 
   const clearHistory = useCallback(() => {
     setMessages([]);

@@ -15,14 +15,17 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { categoryLabels } from '../lib/sampleEvents';
-import { getEventImage } from '../lib/utils';
+import { getEventImage, parseEventDate } from '../lib/utils';
 
 const parseDate = (date: any): Date | null => {
   if (!date) return null;
   if (date instanceof Date) return date;
   if (date.toDate && typeof date.toDate === 'function') return date.toDate();
   if (date.seconds && date.nanoseconds) return new Date(date.seconds * 1000);
-  if (typeof date === 'string') return new Date(date);
+  if (typeof date === 'string') {
+    const s = date.replace(/Z$/i, '').replace(/\.\d{3}Z?$/i, '');
+    return new Date(s);
+  }
   const parsed = new Date(date);
   return isNaN(parsed.getTime()) ? null : parsed;
 };

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from app.models import Event, User
 from app.routes.auth import get_current_user
+from app.notifications_service import sync_favorite_near
 from app.schemas import EventListResponse
 
 router = APIRouter(prefix="/favorites", tags=["Favorites"])
@@ -43,6 +44,7 @@ async def add_favorite(event_id: str, current_user: User = Depends(get_current_u
     if event_id not in (user.favorites or []):
         user.favorites = (user.favorites or []) + [event_id]
         await user.save()
+    await sync_favorite_near(user)
     return {"message": "Evento agregado a favoritos", "favorites": user.favorites}
 
 
@@ -54,4 +56,5 @@ async def remove_favorite(event_id: str, current_user: User = Depends(get_curren
     if user.favorites and event_id in user.favorites:
         user.favorites = [f for f in user.favorites if f != event_id]
         await user.save()
+    await sync_favorite_near(user)
     return {"message": "Evento eliminado de favoritos", "favorites": user.favorites}
