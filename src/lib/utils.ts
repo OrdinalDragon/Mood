@@ -94,8 +94,10 @@ export function formatRelativeTime(date: any): string {
 export function formatCountdown(date: any): string {
   const d = parseEventDate(date);
   if (!d || isNaN(d.getTime())) return '';
-  const diff = d.getTime() - Date.now();
-  const days = Math.ceil(diff / 86400000);
+  const now = new Date();
+  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startEvent = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const days = Math.round((startEvent.getTime() - startToday.getTime()) / 86400000);
   if (days <= 0) return 'Hoy';
   if (days === 1) return 'Mañana';
   return `Faltan ${days} días`;

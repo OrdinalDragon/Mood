@@ -46,9 +46,17 @@ async def list_events(
     weekend: Optional[str] = None,
     lat: Optional[float] = None,
     lng: Optional[float] = None,
-    radius_km: Optional[float] = 50
+    radius_km: Optional[float] = 50,
+    sort: Optional[str] = None,
+    limit: Optional[int] = None
 ):
-    """Lista eventos con filtros opcionales."""
+    """Lista eventos con filtros opcionales.
+
+    sort:
+      - "closest": eventos próximos (fecha >= ahora) ordenados por cercanía combinada
+        (distancia en km + días hasta el evento * 20). Requiere lat/lng.
+      - "soonest": eventos próximos (fecha >= ahora) ordenados por fecha ascendente.
+    """
     filters = []
 
     if status_filter:
@@ -143,6 +151,23 @@ async def list_events(
             e for e in events
             if search_lower in e.title.lower() or search_lower in (e.description or '').lower()
         ]
+
+    # Orden por cercanía combinada (ubicación + fecha)
+    if sort and sort.lower() == 'closest':
+        now = arg_now()
+        events = [e for e in events if e.date >= now]
+        for e in events:
+            days = max((e.date - now).total_seconds() / 86400, 0)
+            dist = getattr(e, '_distance', None)
+            e._rank = (dist if dist is not None else 9999) + days * 20
+        events.sort(key=lambda e: getattr(e, '_rank', 9999))
+    elif sort and sort.lower() == 'soonest':
+        now = arg_now()
+        events = [e for e in events if e.date >= now]
+        events.sort(key=lambda e: e.date)
+
+    if limit:
+        events = events[:limit]
 
     result = []
     for e in events:

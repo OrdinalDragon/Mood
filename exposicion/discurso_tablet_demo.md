@@ -110,7 +110,7 @@ Pueden probarla ustedes mismos: en el **pie de página está el código QR** par
 - [ ] **Auto-lock desactivado** y brillo al máximo
 - [ ] **Notificaciones desactivadas** (silencioso + no molestar)
 - [ ] **Sesión de Google ya iniciada** en la tablet: `schernetzki96@gmail.com` (el login con Google tarda menos si la sesión ya existe)
-- [ ] Campana con **badge 4** y las notificaciones listas: 3 avisos "Hoy" + "Hay 1 evento nuevo que esperan aprobación"
+- [ ] Campana con **badge 3** y las notificaciones listas: 3 avisos "Hoy" + aviso "Hay 1 evento nuevo que esperan aprobación"
 - [ ] Evento pendiente **"Cata de vinos en Palermo"** sembrado en la cuenta para el demo de moderación (no aprobarlo antes)
 - [ ] Hero del Home mostrando la **Exposición del Proyecto MOOD** (evento de la presentación)
 - [ ] Página **"Quiénes somos"** (`/quienes-somos`) cargada una vez para verificar el QR del footer escaneable

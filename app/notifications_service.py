@@ -2,13 +2,21 @@
 # app/notifications_service.py - Lógica de Notificaciones
 # ============================================================
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from app.models import Notification, Event, User
 
 FAVORITE_WINDOW_DAYS = 7
 FAVORITE_AGGREGATE_THRESHOLD = 10
 
 ADMIN_ROLES = ("admin", "moderator")
+
+# Las fechas de los eventos se guardan como hora local (ARG, UTC-3) naive,
+# igual que en app/routes/events.py. Usamos el mismo "now" para comparar.
+ARG_TZ = timezone(timedelta(hours=-3))
+
+
+def arg_now():
+    return datetime.now(ARG_TZ).replace(tzinfo=None)
 
 
 async def create_notification(
@@ -37,7 +45,7 @@ async def create_notification(
 
 
 def countdown_text(event_date: datetime, now: datetime = None) -> str:
-    now = now or datetime.utcnow()
+    now = now or arg_now()
     days = (event_date - now).days
     if days <= 0:
         return "Hoy"
@@ -100,14 +108,21 @@ async def sync_favorite_near(user: User):
         ).delete_many()
         return
 
-    now = datetime.utcnow()
+    now = arg_now()
     window_end = now + timedelta(days=FAVORITE_WINDOW_DAYS)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
+    # Favorito aprobado dentro de la ventana de 7 días, incluyendo los de
+    # HOY: aunque ya hayan arrancado (en curso) siguen avisando "Hoy".
     near_events = await Event.find(
         {
             "_id": {"$in": favorites},
             "status": "approved",
-            "date": {"$gte": now, "$lte": window_end},
+            "date": {"$lte": window_end},
+            "$or": [
+                {"end_date": {"$gte": now}},
+                {"end_date": None, "date": {"$gte": today_start}},
+            ],
         }
     ).sort("date").to_list()
 

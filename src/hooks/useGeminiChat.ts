@@ -11,6 +11,7 @@ export interface ChatMessage {
   content: string;
   name?: string;
   done?: boolean;
+  events?: any[];
 }
 
 interface UseGeminiChatOptions {
@@ -167,11 +168,19 @@ export function useGeminiChat({ currentMood, location }: UseGeminiChatOptions = 
 
           try {
             const result = await fn(call.args);
+            let events: any[] | undefined;
+            if (call.name === 'search_events' || call.name === 'get_event_detail') {
+              try {
+                const parsed = JSON.parse(result);
+                if (Array.isArray(parsed)) events = parsed;
+                else if (parsed && parsed.id) events = [parsed];
+              } catch {}
+            }
             setMessages(prev => {
               const updated = [...prev];
               for (let i = updated.length - 1; i >= 0; i--) {
                 if (updated[i].role === 'function' && updated[i].name === call.name && !updated[i].done) {
-                  updated[i] = { ...updated[i], content: result, done: true };
+                  updated[i] = { ...updated[i], content: result, done: true, events };
                   break;
                 }
               }

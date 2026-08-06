@@ -20,18 +20,21 @@ Contexto actual del usuario:
 
 Reglas:
 - Responder en español, tono amigable y conciso
+- PROHIBIDO usar markdown o asteriscos: nunca uses *, **, cursivas, negritas, tablas, backticks ni viñetas. Texto plano siempre
+- Para mencionar un estado de ánimo usá el emoji seguido del nombre: 😊 Alegre, 😢 Triste, 😤 Enojado, 😌 Tranquilo, 🤫 Reservado
+- Para mencionar un evento usá solo su título (sin asteriscos ni comillas) y, si aporta, una descripción breve de una línea; la app ya muestra cada evento como tarjeta clicable
 - Usar las funciones disponibles cuando necesites datos o acciones
 - Si el usuario expresa cómo se siente o qué busca (tranquilo, relajado, etc.), SIEMPRE llamá set_user_mood PRIMERO para cambiar su mood, y luego search_events
 - No combines mood con category en search_events — usá uno u otro, o dejá category vacío
-- Después de ejecutar funciones, SIEMPRE respondé con un texto final recomendando eventos o dando información útil
-- Recomendar máximo 3-4 eventos relevantes
+- Después de ejecutar funciones, respondé con un texto breve y natural recomendando eventos o dando información útil. La app muestra los eventos encontrados como tarjetas clicables, por eso NO los listes como código, tablas, markdown ni listas largas: mencionálos en una o dos líneas nomás
+- search_events ya devuelve los 3 eventos más cercanos, ordenados por ubicación y fecha; mencioná únicamente esos (máximo 3)
 - No inventar eventos que no existan
 - Si search_events no encuentra resultados, informá al usuario amablemente y sugerí buscar en otra zona o con otros filtros"""
 
 FUNCTION_DECLARATIONS = [
     {
         "name": "search_events",
-        "description": "Busca eventos con filtros. Llama a esta función cuando el usuario quiera buscar eventos.",
+        "description": "Busca eventos con filtros. Los resultados ya vienen ordenados por cercanía: los 3 eventos más cercanos al usuario según ubicación y fecha. Llama a esta función cuando el usuario quiera buscar eventos.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -39,8 +42,7 @@ FUNCTION_DECLARATIONS = [
                 "category": {"type": "string", "description": "Categoría (cultural, adventure, relax, nightlife, group, individual)"},
                 "province": {"type": "string", "description": "Provincia"},
                 "city": {"type": "string", "description": "Ciudad"},
-                "free_only": {"type": "boolean", "description": "Solo eventos gratis"},
-                "limit": {"type": "integer", "description": "Cantidad máxima de resultados (default 5)"}
+                "free_only": {"type": "boolean", "description": "Solo eventos gratis"}
             }
         }
     },

@@ -14,7 +14,16 @@ export async function search_events(args: Record<string, any>): Promise<string> 
     if (args.province) url += `&province=${encodeURIComponent(args.province)}`;
     if (args.city) url += `&city=${encodeURIComponent(args.city)}`;
     if (args.free_only) url += `&is_free=true`;
-    url += `&limit=${args.limit || 5}`;
+
+    const params = new URLSearchParams(window.location.search);
+    const lat = params.get('lat');
+    const lng = params.get('lng');
+    if (lat && lng) {
+      url += `&lat=${encodeURIComponent(lat)}&lng=${encodeURIComponent(lng)}&radius_km=150&sort=closest`;
+    } else {
+      url += `&sort=soonest`;
+    }
+    url += `&limit=3`;
 
     const token = getToken();
     const headers: Record<string, string> = {};
@@ -33,7 +42,10 @@ export async function search_events(args: Record<string, any>): Promise<string> 
       category: e.category,
       moods: e.moods,
       location: e.location,
-      is_free: e.is_free
+      is_free: e.is_free,
+      image_url: e.image_url,
+      cover_image: e.cover_image,
+      distance: e.distance
     })));
   } catch (err) {
     return `Error al buscar eventos: ${err}`;
