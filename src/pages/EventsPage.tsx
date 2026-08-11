@@ -49,6 +49,7 @@ function EventsPage() {
           if (moodFilter) {
             list = list.filter(e => e.moods && e.moods.includes(moodFilter));
           }
+          list.sort((a, b) => (a.date ? new Date(a.date).getTime() : 0) - (b.date ? new Date(b.date).getTime() : 0));
         }
         setEvents(list);
       } catch (error) {
