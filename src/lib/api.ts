@@ -50,8 +50,8 @@ async function apiFetch<T>(url: string, options: RequestInit = {}): Promise<T> {
 }
 
 // Obtener eventos del backend
-export async function getEvents(status: string = 'approved'): Promise<Event[]> {
-  return apiFetch<Event[]>(`/events/?status_filter=${status}`);
+export async function getEvents(status: string = 'approved', sort?: string): Promise<Event[]> {
+  return apiFetch<Event[]>(`/events/?status_filter=${status}${sort ? `&sort=${sort}` : ''}`);
 }
 
 // Obtener eventos pendientes (para admin)
