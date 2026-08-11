@@ -34,7 +34,8 @@ export type Category =
 export type EventStatus = 
   | 'pending'   // Pendiente de aprobación por admin
   | 'approved' // Aprobado y visible en el mapa
-  | 'rejected'; // Rechazado por admin
+  | 'rejected' // Rechazado por admin
+  | 'archived'; // Concluido: su fecha ya pasó (pestaña "Eventos concluidos")
 
 
 /**
@@ -140,6 +141,7 @@ export interface UserProfile {
   favorites: string[];
   created_at: any;
   updated_at?: any;
+  email_notifications?: boolean;
 }
 
 

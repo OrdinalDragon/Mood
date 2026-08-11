@@ -142,6 +142,15 @@ const getCategoryColor = (cat: string): string => {
               className={user && isFavorite ? 'text-red-500 fill-red-500' : 'text-slate-500'}
             />
           </button>
+
+          {/* Badge de evento concluido */}
+          {event.status === 'archived' && (
+            <div className="absolute bottom-3 left-3">
+              <Badge className="bg-slate-900/80 dark:bg-slate-900/80 text-white border-0 text-xs">
+                Concluido
+              </Badge>
+            </div>
+          )}
         </div>
         
         {/* Contenido textual */}

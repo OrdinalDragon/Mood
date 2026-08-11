@@ -5,7 +5,7 @@ import asyncio
 import logging
 from datetime import datetime
 from app.models import User
-from app.notifications_service import sync_favorite_near
+from app.notifications_service import sync_favorite_near, archive_past_events
 
 logger = logging.getLogger(__name__)
 
@@ -13,6 +13,10 @@ SCAN_INTERVAL_SECONDS = 60 * 60  # 1 hora
 
 
 async def scan_favorite_near_once():
+    try:
+        await archive_past_events()
+    except Exception as e:
+        logger.error(f"archive_past_events error: {e}")
     users = await User.find_all().to_list()
     for user in users:
         try:

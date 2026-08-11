@@ -1,12 +1,19 @@
 # ============================================================
 # app/notifications_service.py - Lógica de Notificaciones
 # ============================================================
+import asyncio
+import logging
+import os
 import uuid
 from datetime import datetime, timedelta, timezone
 from app.models import Notification, Event, User
+from app.email import send_event_reminder_email, send_events_summary_email
+
+logger = logging.getLogger(__name__)
 
 FAVORITE_WINDOW_DAYS = 7
 FAVORITE_AGGREGATE_THRESHOLD = 10
+EMAIL_REMINDERS_ENABLED = os.getenv("SEND_EMAIL_REMINDERS", "1").lower() in ("1", "true", "yes")
 
 ADMIN_ROLES = ("admin", "moderator")
 
@@ -54,6 +61,28 @@ def countdown_text(event_date: datetime, now: datetime = None) -> str:
     return f"Faltan {days} días"
 
 
+async def send_reminder_email_safe(user: User, event: Event, countdown: str):
+    """Envía el mail recordatorio de un evento. Los fallos de SMTP se loguean
+    y no interrumpen el scan del resto de usuarios."""
+    try:
+        await asyncio.to_thread(
+            send_event_reminder_email, user.email, user.display_name, event, countdown
+        )
+        logger.info(f"reminder email sent to {user.email} for event {event.id}")
+    except Exception as e:
+        logger.error(f"send_event_reminder_email error for user {user.uid}: {e}")
+
+
+async def send_summary_email_safe(user: User, count: int):
+    try:
+        await asyncio.to_thread(
+            send_events_summary_email, user.email, user.display_name, count
+        )
+        logger.info(f"summary email sent to {user.email} ({count} events)")
+    except Exception as e:
+        logger.error(f"send_events_summary_email error for user {user.uid}: {e}")
+
+
 # ============================================================
 # ADMIN - "Hay X eventos nuevos que esperan aprobación"
 # ============================================================
@@ -94,6 +123,27 @@ async def sync_admin_pending_notifications():
             if pending_count > (old_count or 0):
                 existing.read = False
             await existing.save()
+
+
+# ============================================================
+# ARCHIVADO - eventos aprobados con fecha pasada
+# ============================================================
+async def archive_past_events():
+    """Marca como 'archived' los eventos aprobados cuya fecha ya pasó.
+    No genera mails ni notificaciones: solo actualiza el estado para que
+    salgan de los listados por defecto y pasen a la pestaña de concluidos."""
+    now = arg_now()
+    events = await Event.find(
+        {"status": "approved", "date": {"$lt": now}}
+    ).to_list()
+    archived = 0
+    for e in events:
+        e.status = "archived"
+        await e.save()
+        archived += 1
+    if archived:
+        logger.info(f"archived {archived} past events")
+    return archived
 
 
 # ============================================================
@@ -156,6 +206,8 @@ async def sync_favorite_near(user: User):
                 link="/favorites",
                 event_count=len(near_events),
             )
+            if EMAIL_REMINDERS_ENABLED and user.email_notifications:
+                await send_summary_email_safe(user, len(near_events))
         return
 
     # Eliminar agregada si existía
@@ -178,6 +230,8 @@ async def sync_favorite_near(user: User):
                 event_id=e.id,
                 event_date=e.date,
             )
+            if EMAIL_REMINDERS_ENABLED and user.email_notifications:
+                await send_reminder_email_safe(user, e, countdown_text(e.date, now))
 
 
 # ============================================================
