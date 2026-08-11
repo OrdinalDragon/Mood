@@ -22,7 +22,7 @@
 
 ## PERSONA A — Apertura, problema e idea — (0:00–1:00)
 
-Buenas, somos el Grupo 6 y hoy les presentamos **MOOD**: una web que te dice qué hacer en tu ciudad según cómo te sentís.
+Buenas a todos, soy "gaston" y junto con mi grupo hoy venimos a presentarles **MOOD**: una web que te dice qué hacer en tu ciudad según cómo te sentís.
 
 Antes de arrancar, una pregunta: ¿cuántas veces buscaste "qué hacer hoy" y terminaste saltando entre Instagram, Google y mil pestañas abiertas, sin encontrar nada que realmente te cierre? Eso es exactamente lo que venimos a resolver.
 
