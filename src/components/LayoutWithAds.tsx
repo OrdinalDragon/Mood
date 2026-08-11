@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { AdBanner } from './AdBanner';
 import { getAds } from '../lib/api';
 import { Ad } from '../types';
@@ -27,7 +27,7 @@ interface LayoutWithAdsProps {
 export const LayoutWithAds: React.FC<LayoutWithAdsProps> = ({ children }) => {
   const [ads, setAds] = useState<Ad[]>([]);
   const [loadingAds, setLoadingAds] = useState(true);
-  const [featuredIndex, setFeaturedIndex] = useState(0);
+  const trackRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -44,13 +44,32 @@ export const LayoutWithAds: React.FC<LayoutWithAdsProps> = ({ children }) => {
   const leftAds = columnAds.filter((_, i) => i % 2 === 0);
   const rightAds = columnAds.filter((_, i) => i % 2 === 1);
 
-  const safeIndex = featuredAds.length ? featuredIndex % featuredAds.length : 0;
+  const scrollBySlide = (dir: number) => {
+    const track = trackRef.current;
+    if (!track) return;
+    const slides = track.querySelectorAll<HTMLElement>('[data-slide]');
+    const first = slides[0];
+    const second = slides[1];
+    const step = first && second
+      ? second.getBoundingClientRect().left - first.getBoundingClientRect().left
+      : first
+        ? first.getBoundingClientRect().width
+        : track.clientWidth;
+    track.scrollBy({ left: dir * step, behavior: 'smooth' });
+  };
 
-  // Autoplay: avanza una slide a la vez, en bucle
+  // Autoplay: avanza una card por vez y vuelve al inicio al llegar al final
   useEffect(() => {
     if (featuredAds.length < 2) return;
     const id = setInterval(() => {
-      setFeaturedIndex((prev) => prev + 1);
+      const track = trackRef.current;
+      if (!track) return;
+      const maxScroll = track.scrollWidth - track.clientWidth;
+      if (track.scrollLeft >= maxScroll - 4) {
+        track.scrollTo({ left: 0, behavior: 'smooth' });
+      } else {
+        scrollBySlide(1);
+      }
     }, AUTOPLAY_INTERVAL_MS);
     return () => clearInterval(id);
   }, [featuredAds.length]);
@@ -58,30 +77,17 @@ export const LayoutWithAds: React.FC<LayoutWithAdsProps> = ({ children }) => {
   return (
     <div className="px-4 pb-12">
       {!loadingAds && featuredAds.length > 0 && (
-        <section className="relative mb-8 overflow-hidden rounded-2xl">
+        <section className="relative mb-8">
           <div
-            className="flex transition-transform duration-700 ease-in-out"
-            style={{ transform: `translateX(-${safeIndex * 100}%)` }}
+            ref={trackRef}
+            className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide py-1"
           >
             {featuredAds.map((ad) => (
-              <div key={ad.id} className="w-full flex-shrink-0">
-                <AdBanner {...adToProps(ad)} variant="banner" />
+              <div key={ad.id} data-slide className="w-72 flex-shrink-0 snap-start">
+                <AdBanner {...adToProps(ad)} />
               </div>
             ))}
           </div>
-
-          {featuredAds.length > 1 && (
-            <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5 z-10">
-              {featuredAds.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setFeaturedIndex(i)}
-                  className={`h-2 rounded-full transition-all ${i === safeIndex ? 'w-6 bg-white' : 'w-2 bg-white/50 hover:bg-white/80'}`}
-                  aria-label={`Ir al anuncio ${i + 1}`}
-                />
-              ))}
-            </div>
-          )}
         </section>
       )}
 
