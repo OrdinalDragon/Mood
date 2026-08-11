@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, MapPin, Calendar, ArrowRight, LocateFixed, Loader2 } from 'lucide-react';
+import { Search, MapPin, Calendar, LocateFixed, Loader2 } from 'lucide-react';
 import { 
   Select,
   SelectContent,
@@ -10,10 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { getEventCounts, getAds } from '../lib/api';
-import { Ad } from '../types';
+import { getEventCounts } from '../lib/api';
 
 const PROVINCES = [
   "Buenos Aires", "Catamarca", "Chaco", "Chubut", "Córdoba", "Corrientes", 
@@ -21,75 +18,6 @@ const PROVINCES = [
   "Misiones", "Neuquén", "Río Negro", "Salta", "San Juan", "San Luis", 
   "Santa Cruz", "Santa Fe", "Santiago del Estero", "Tierra del Fuego", "Tucumán"
 ];
-
-const HERO_GRADIENTS: Record<string, {
-  card: string;
-  badge: string;
-  text: string;
-  footerBg: string;
-  footerText: string;
-  button: string;
-}> = {
-  blue: {
-    card: 'bg-gradient-to-br from-blue-600 to-blue-800',
-    badge: 'bg-blue-500',
-    text: 'text-blue-100',
-    footerBg: 'bg-blue-900/50',
-    footerText: 'text-blue-200',
-    button: 'bg-white text-blue-600 hover:bg-blue-50',
-  },
-  purple: {
-    card: 'bg-gradient-to-br from-purple-600 to-pink-500',
-    badge: 'bg-purple-500',
-    text: 'text-purple-100',
-    footerBg: 'bg-purple-900/50',
-    footerText: 'text-purple-200',
-    button: 'bg-white text-purple-600 hover:bg-purple-50',
-  },
-  emerald: {
-    card: 'bg-gradient-to-br from-emerald-600 to-teal-700',
-    badge: 'bg-emerald-500',
-    text: 'text-emerald-100',
-    footerBg: 'bg-emerald-900/50',
-    footerText: 'text-emerald-200',
-    button: 'bg-white text-emerald-600 hover:bg-emerald-50',
-  },
-  rose: {
-    card: 'bg-gradient-to-br from-rose-600 to-red-700',
-    badge: 'bg-rose-500',
-    text: 'text-rose-100',
-    footerBg: 'bg-rose-900/50',
-    footerText: 'text-rose-200',
-    button: 'bg-white text-rose-600 hover:bg-rose-50',
-  },
-  violet: {
-    card: 'bg-gradient-to-br from-violet-600 to-indigo-700',
-    badge: 'bg-violet-500',
-    text: 'text-violet-100',
-    footerBg: 'bg-violet-900/50',
-    footerText: 'text-violet-200',
-    button: 'bg-white text-violet-600 hover:bg-violet-50',
-  },
-  orange: {
-    card: 'bg-gradient-to-br from-orange-500 to-rose-500',
-    badge: 'bg-orange-500',
-    text: 'text-orange-100',
-    footerBg: 'bg-orange-900/50',
-    footerText: 'text-orange-200',
-    button: 'bg-white text-orange-600 hover:bg-orange-50',
-  },
-};
-
-const HERO_BADGE_COLORS: Record<string, string> = {
-  emerald: 'bg-emerald-500',
-  blue: 'bg-blue-500',
-  purple: 'bg-purple-500',
-  rose: 'bg-rose-500',
-  violet: 'bg-violet-500',
-  orange: 'bg-orange-500',
-  red: 'bg-red-500',
-  yellow: 'bg-yellow-500',
-};
 
 const quickLinks = [
   { label: 'Hoy', filter: 'today' },
@@ -106,17 +34,6 @@ export const Hero: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [locating, setLocating] = useState(false);
   const [geoError, setGeoError] = useState('');
-  const [heroAds, setHeroAds] = useState<Ad[]>([]);
-
-  useEffect(() => {
-    getAds().then(data => {
-      const hero = data
-        .filter(a => a.hero)
-        .sort((a, b) => a.order - b.order)
-        .slice(0, 2);
-      setHeroAds(hero.length > 0 ? hero : data.slice(0, 2));
-    }).catch(() => setHeroAds([]));
-  }, []);
 
   useEffect(() => {
     getEventCounts().then(data => {
@@ -230,42 +147,7 @@ export const Hero: React.FC = () => {
           Filtrá según cómo te sentís hoy y viví experiencias únicas.
         </p>
 
-        {heroAds.length > 0 && (
-        <div className="flex items-start justify-center gap-6">
-          {heroAds[0] && (() => {
-            const ad = heroAds[0];
-            const g = HERO_GRADIENTS[ad.gradient || ''] || HERO_GRADIENTS['blue'];
-            const badgeColor = (ad.badge_color && HERO_BADGE_COLORS[ad.badge_color]) || g.badge;
-            return (
-              <a key={ad.id} href={ad.cta_link || '#'} className="hidden lg:block w-64 flex-shrink-0">
-                <Card className={`${g.card} border-0 overflow-hidden hover:opacity-95 transition-opacity`}>
-                  <CardContent className="p-0">
-                    <div className="relative p-4 text-white">
-                      {ad.badge && (
-                        <Badge className={`absolute top-2 left-2 ${badgeColor} text-white border-0 text-xs`}>
-                          {ad.badge}
-                        </Badge>
-                      )}
-                      <div className="text-4xl mb-2 mt-4">{ad.icon || '🎉'}</div>
-                      <h3 className="font-bold text-lg">{ad.title}</h3>
-                      {ad.subtitle && <p className={`${g.text} text-sm mb-2`}>{ad.subtitle}</p>}
-                      {ad.description && <p className={`${g.text} text-xs mb-3`}>{ad.description}</p>}
-                      <Button className={`w-full ${g.button} font-semibold text-sm`}>
-                        {ad.cta_text || 'Ver más'}
-                      </Button>
-                    </div>
-                    {ad.footer && (
-                      <div className={`${g.footerBg} px-4 py-2 text-center`}>
-                        <p className={`text-xs ${g.footerText}`}>{ad.footer}</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </a>
-            );
-          })()}
-
-          <div className="flex-1 max-w-4xl">
+        <div className="max-w-4xl mx-auto">
             <div className="rounded-2xl bg-white dark:bg-slate-800 p-2 shadow-2xl border border-slate-100 dark:border-slate-700 flex flex-col md:flex-row gap-2 mb-4">
               <div className="flex-1 flex items-center px-4 gap-2 border-b md:border-b-0 md:border-r border-slate-100 py-2">
                 <MapPin className="text-primary" size={20} />
@@ -356,41 +238,6 @@ export const Hero: React.FC = () => {
               <p className="text-xs text-red-500 text-center mt-2">{geoError}</p>
             )}
           </div>
-
-          {heroAds[1] && (() => {
-            const ad = heroAds[1];
-            const g = HERO_GRADIENTS[ad.gradient || ''] || HERO_GRADIENTS['purple'];
-            const badgeColor = (ad.badge_color && HERO_BADGE_COLORS[ad.badge_color]) || g.badge;
-            return (
-              <a key={ad.id} href={ad.cta_link || '#'} className="hidden lg:block w-64 flex-shrink-0">
-                <Card className={`${g.card} border-0 overflow-hidden hover:opacity-95 transition-opacity`}>
-                  <CardContent className="p-0">
-                    <div className="relative p-4 text-white">
-                      {ad.badge && (
-                        <Badge className={`absolute top-2 left-2 ${badgeColor} text-white border-0 text-xs`}>
-                          {ad.badge}
-                        </Badge>
-                      )}
-                      <div className="text-4xl mb-2 mt-4">{ad.icon || '🎉'}</div>
-                      <h3 className="font-bold text-lg">{ad.title}</h3>
-                      {ad.subtitle && <p className={`${g.text} text-sm mb-2`}>{ad.subtitle}</p>}
-                      {ad.description && <p className={`${g.text} text-xs mb-3`}>{ad.description}</p>}
-                      <Button className={`w-full ${g.button} font-semibold text-sm`}>
-                        {ad.cta_text || 'Ver más'}
-                      </Button>
-                    </div>
-                    {ad.footer && (
-                      <div className={`${g.footerBg} px-4 py-2 text-center`}>
-                        <p className={`text-xs ${g.footerText}`}>{ad.footer}</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </a>
-            );
-          })()}
-        </div>
-        )}
       </div>
     </div>
   );

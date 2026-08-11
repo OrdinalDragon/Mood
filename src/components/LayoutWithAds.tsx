@@ -1,8 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import { AdBanner } from './AdBanner';
 import { getAds } from '../lib/api';
 import { Ad } from '../types';
+
+// Intervalo del autoplay del carrusel
+const AUTOPLAY_INTERVAL_MS = 5000;
 
 function adToProps(ad: Ad) {
   return {
@@ -25,80 +27,95 @@ interface LayoutWithAdsProps {
 export const LayoutWithAds: React.FC<LayoutWithAdsProps> = ({ children }) => {
   const [ads, setAds] = useState<Ad[]>([]);
   const [loadingAds, setLoadingAds] = useState(true);
-  const trackRef = useRef<HTMLDivElement>(null);
+  const [featuredIndex, setFeaturedIndex] = useState(0);
 
   useEffect(() => {
     let mounted = true;
     getAds()
-      .then((data) => { if (mounted) setAds(data.filter(a => a.active && !a.hero)); })
+      .then((data) => { if (mounted) setAds(data.filter(a => a.active)); })
       .catch(() => { if (mounted) setAds([]); })
       .finally(() => { if (mounted) setLoadingAds(false); });
     return () => { mounted = false; };
   }, []);
 
-  const sortedAds = ads.slice().sort((a, b) => a.order - b.order);
+  const sortByOrder = (list: Ad[]) => list.slice().sort((a, b) => a.order - b.order);
+  const featuredAds = sortByOrder(ads.filter(a => a.hero));
+  const columnAds = sortByOrder(ads.filter(a => !a.hero));
+  const leftAds = columnAds.filter((_, i) => i % 2 === 0);
+  const rightAds = columnAds.filter((_, i) => i % 2 === 1);
 
-  // Mueve el carrusel exactamente un slide (ancho real + gap), sin importar el breakpoint.
-  const scrollBySlide = (dir: number) => {
-    const track = trackRef.current;
-    if (!track) return;
-    const slides = track.querySelectorAll<HTMLElement>('[data-slide]');
-    const first = slides[0];
-    const second = slides[1];
-    const step = first && second
-      ? second.getBoundingClientRect().left - first.getBoundingClientRect().left
-      : first
-        ? first.getBoundingClientRect().width
-        : track.clientWidth;
-    track.scrollBy({ left: dir * step, behavior: 'smooth' });
-  };
+  const safeIndex = featuredAds.length ? featuredIndex % featuredAds.length : 0;
+
+  // Autoplay: avanza una slide a la vez, en bucle
+  useEffect(() => {
+    if (featuredAds.length < 2) return;
+    const id = setInterval(() => {
+      setFeaturedIndex((prev) => prev + 1);
+    }, AUTOPLAY_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [featuredAds.length]);
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 pb-12">
-      {!loadingAds && sortedAds.length > 0 && (
-        <section className="relative mb-8">
-          <div className="overflow-hidden rounded-2xl">
-            <div
-              ref={trackRef}
-              className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide"
-            >
-              {sortedAds.map((ad) => (
-                <div
-                  key={ad.id}
-                  data-slide
-                  className="w-full sm:w-1/2 lg:w-1/3 flex-shrink-0 snap-start"
-                >
-                  <AdBanner {...adToProps(ad)} />
-                </div>
-              ))}
-            </div>
+    <div className="px-4 pb-12">
+      {!loadingAds && featuredAds.length > 0 && (
+        <section className="relative mb-8 overflow-hidden rounded-2xl">
+          <div
+            className="flex transition-transform duration-700 ease-in-out"
+            style={{ transform: `translateX(-${safeIndex * 100}%)` }}
+          >
+            {featuredAds.map((ad) => (
+              <div key={ad.id} className="w-full flex-shrink-0">
+                <AdBanner {...adToProps(ad)} variant="banner" />
+              </div>
+            ))}
           </div>
 
-          {sortedAds.length > 1 && (
-            <button
-              onClick={() => scrollBySlide(-1)}
-              className="absolute -left-3 top-1/2 -translate-y-1/2 bg-slate-900/80 hover:bg-slate-900 text-white p-2 rounded-full border border-slate-700 backdrop-blur-md shadow-lg transition-all z-10"
-              aria-label="Anuncio anterior"
-            >
-              <ChevronLeft size={20} />
-            </button>
-          )}
-
-          {sortedAds.length > 1 && (
-            <button
-              onClick={() => scrollBySlide(1)}
-              className="absolute -right-3 top-1/2 -translate-y-1/2 bg-slate-900/80 hover:bg-slate-900 text-white p-2 rounded-full border border-slate-700 backdrop-blur-md shadow-lg transition-all z-10"
-              aria-label="Siguiente anuncio"
-            >
-              <ChevronRight size={20} />
-            </button>
+          {featuredAds.length > 1 && (
+            <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5 z-10">
+              {featuredAds.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setFeaturedIndex(i)}
+                  className={`h-2 rounded-full transition-all ${i === safeIndex ? 'w-6 bg-white' : 'w-2 bg-white/50 hover:bg-white/80'}`}
+                  aria-label={`Ir al anuncio ${i + 1}`}
+                />
+              ))}
+            </div>
           )}
         </section>
       )}
 
-      <main className="w-full">
-        {children}
-      </main>
+      <div className="flex gap-6">
+        <aside className="hidden lg:block w-[300px] flex-shrink-0 sticky top-20 h-fit">
+          <div className="space-y-4">
+            {leftAds.map((ad) => (
+              <AdBanner key={ad.id} {...adToProps(ad)} />
+            ))}
+            {leftAds.length === 0 && !loadingAds && (
+              <div className="text-sm text-muted-foreground text-center py-8">
+                No hay anuncios para mostrar
+              </div>
+            )}
+          </div>
+        </aside>
+
+        <main className="flex-1 min-w-0">
+          {children}
+        </main>
+
+        <aside className="hidden xl:block w-[300px] flex-shrink-0 sticky top-20 h-fit">
+          <div className="space-y-4">
+            {rightAds.map((ad) => (
+              <AdBanner key={ad.id} {...adToProps(ad)} />
+            ))}
+            {rightAds.length === 0 && !loadingAds && (
+              <div className="text-sm text-muted-foreground text-center py-8">
+                No hay anuncios para mostrar
+              </div>
+            )}
+          </div>
+        </aside>
+      </div>
     </div>
   );
 };
