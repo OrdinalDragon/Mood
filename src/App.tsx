@@ -37,7 +37,6 @@ import { QuienesSomosPage } from './pages/QuienesSomosPage';
 import { FavoritesPage } from './pages/FavoritesPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { EventCard } from '@/components/EventCard';
-import { LayoutWithAds } from './components/LayoutWithAds';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 // Notificaciones toast
@@ -235,8 +234,7 @@ function HomePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <LayoutWithAds>
-        <div ref={contentRef} className="container mx-auto px-4 py-12">
+      <div ref={contentRef} className="container mx-auto px-4 py-12">
           <div className="mb-16">
             <div className="flex flex-col md:flex-row justify-between items-end mb-8 gap-4">
               <div>
@@ -269,7 +267,6 @@ function HomePage() {
             <EventMap events={events} />
           </div>
         </div>
-      </LayoutWithAds>
     </div>
   );
 }
