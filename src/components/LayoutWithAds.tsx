@@ -1,10 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AdBanner } from './AdBanner';
 import { getAds } from '../lib/api';
 import { Ad } from '../types';
 
-// Intervalo del autoplay del carrusel
-const AUTOPLAY_INTERVAL_MS = 5000;
+// Copias del set de ads hero en el track del marquee (deben ser >= 2 para el bucle sin fin)
+const MARQUEE_COPIES = 4;
 
 function adToProps(ad: Ad) {
   return {
@@ -27,7 +27,6 @@ interface LayoutWithAdsProps {
 export const LayoutWithAds: React.FC<LayoutWithAdsProps> = ({ children }) => {
   const [ads, setAds] = useState<Ad[]>([]);
   const [loadingAds, setLoadingAds] = useState(true);
-  const trackRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -44,49 +43,26 @@ export const LayoutWithAds: React.FC<LayoutWithAdsProps> = ({ children }) => {
   const leftAds = columnAds.filter((_, i) => i % 2 === 0);
   const rightAds = columnAds.filter((_, i) => i % 2 === 1);
 
-  const scrollBySlide = (dir: number) => {
-    const track = trackRef.current;
-    if (!track) return;
-    const slides = track.querySelectorAll<HTMLElement>('[data-slide]');
-    const first = slides[0];
-    const second = slides[1];
-    const step = first && second
-      ? second.getBoundingClientRect().left - first.getBoundingClientRect().left
-      : first
-        ? first.getBoundingClientRect().width
-        : track.clientWidth;
-    track.scrollBy({ left: dir * step, behavior: 'smooth' });
-  };
-
-  // Autoplay: avanza una card por vez y vuelve al inicio al llegar al final
-  useEffect(() => {
-    if (featuredAds.length < 2) return;
-    const id = setInterval(() => {
-      const track = trackRef.current;
-      if (!track) return;
-      const maxScroll = track.scrollWidth - track.clientWidth;
-      if (track.scrollLeft >= maxScroll - 4) {
-        track.scrollTo({ left: 0, behavior: 'smooth' });
-      } else {
-        scrollBySlide(1);
-      }
-    }, AUTOPLAY_INTERVAL_MS);
-    return () => clearInterval(id);
-  }, [featuredAds.length]);
-
   return (
     <div className="px-4 pb-12">
       {!loadingAds && featuredAds.length > 0 && (
         <section className="relative mb-8">
-          <div
-            ref={trackRef}
-            className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide py-1"
-          >
-            {featuredAds.map((ad) => (
-              <div key={ad.id} data-slide className="w-72 flex-shrink-0 snap-start">
-                <AdBanner {...adToProps(ad)} />
-              </div>
-            ))}
+          <div className="overflow-hidden">
+            <div
+              className="marquee flex w-max gap-4 py-1 hover:[animation-play-state:paused]"
+              style={{
+                '--marquee-copies': MARQUEE_COPIES,
+                '--marquee-duration': `${Math.max(8, featuredAds.length * 5) * MARQUEE_COPIES}s`,
+              } as React.CSSProperties}
+            >
+              {Array.from({ length: MARQUEE_COPIES }, (_, copy) =>
+                featuredAds.map((ad) => (
+                  <div key={`${ad.id}-${copy}`} data-slide className="w-72 flex-shrink-0">
+                    <AdBanner {...adToProps(ad)} />
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </section>
       )}

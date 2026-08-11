@@ -14,6 +14,27 @@
   }
 }
 
+/* Carrusel sin fin: el track se duplica y se desplaza -(100%/copias) para volver al inicio sin salto */
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(calc(-100% / var(--marquee-copies)));
+  }
+}
+
+@utility marquee {
+  --marquee-copies: 2;
+  animation: marquee var(--marquee-duration, 24s) linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee {
+    animation: none;
+  }
+}
+
 @theme inline {
     --font-heading: var(--font-sans);
     --font-sans: 'Geist Variable', sans-serif;
