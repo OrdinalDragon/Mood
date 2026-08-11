@@ -93,8 +93,8 @@ async def create_review(
     event = await Event.find_one(Event.id == event_id)
     if not event:
         raise HTTPException(status_code=404, detail="Evento no encontrado")
-    if event.status != "approved":
-        raise HTTPException(status_code=400, detail="No podés valorar un evento que no está aprobado")
+    if event.status not in ("approved", "archived"):
+        raise HTTPException(status_code=400, detail="Solo podés valorar eventos aprobados o concluidos")
     if data.rating < 1 or data.rating > 10:
         raise HTTPException(status_code=400, detail="La puntuación debe estar entre 1 y 10")
     if data.comment and len(data.comment.strip()) > 2000:
