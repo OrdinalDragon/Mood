@@ -135,8 +135,8 @@ export async function getMe(): Promise<UserProfile> {
   return apiFetch<UserProfile>('/auth/me');
 }
 
-// Actualizar perfil de usuario (nombre y/o foto)
-export async function updateProfile(data: { display_name?: string; photo_url?: string }): Promise<UserProfile> {
+// Actualizar perfil de usuario (nombre, foto y/o recordatorios por email)
+export async function updateProfile(data: { display_name?: string; photo_url?: string; email_notifications?: boolean }): Promise<UserProfile> {
   return apiFetch<UserProfile>('/auth/me', {
     method: 'PUT',
     body: JSON.stringify(data),

@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Calendar, Mail, Shield, User as UserIcon, Camera, KeyRound, Loader2, MapPin, Clock, X, Star } from 'lucide-react';
+import { Calendar, Mail, Shield, User as UserIcon, Camera, KeyRound, Loader2, MapPin, Clock, X, Star, Bell } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -57,6 +57,16 @@ export const ProfilePage: React.FC = () => {
   const [newPass, setNewPass] = useState('');
   const [confirmPass, setConfirmPass] = useState('');
   const [savingPass, setSavingPass] = useState(false);
+
+  // Email reminders toggle state
+  const [emailNotif, setEmailNotif] = useState(true);
+  const [savingNotif, setSavingNotif] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setEmailNotif(user.email_notifications !== false);
+    }
+  }, [user]);
 
   useEffect(() => {
     if (user) {
@@ -109,6 +119,21 @@ export const ProfilePage: React.FC = () => {
       toast.error('Error al actualizar el perfil');
     } finally {
       setSavingProfile(false);
+    }
+  };
+
+  const handleToggleEmailNotif = async (value: boolean) => {
+    const prev = emailNotif;
+    setEmailNotif(value);
+    setSavingNotif(true);
+    try {
+      await updateProfile({ email_notifications: value });
+      toast.success(value ? 'Recordatorios por email activados' : 'Recordatorios por email desactivados');
+    } catch (err) {
+      setEmailNotif(prev);
+      toast.error('Error al actualizar las preferencias');
+    } finally {
+      setSavingNotif(false);
     }
   };
 
@@ -237,6 +262,26 @@ export const ProfilePage: React.FC = () => {
                   <p className="text-sm text-muted-foreground">Tus valoraciones se suman acá</p>
                 )}
               </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className="p-3 bg-primary/15 rounded-lg">
+                <Bell className="w-6 h-6 text-primary" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-card-foreground">Recordatorios por email</h3>
+                <p className="text-sm text-muted-foreground">Avísame por mail cuando un evento guardado esté cerca</p>
+              </div>
+              <button
+                role="switch"
+                aria-checked={emailNotif}
+                disabled={savingNotif}
+                onClick={() => handleToggleEmailNotif(!emailNotif)}
+                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${emailNotif ? 'bg-primary' : 'bg-slate-300'}`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${emailNotif ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
             </CardContent>
           </Card>
         </div>

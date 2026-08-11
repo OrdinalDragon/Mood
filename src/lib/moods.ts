@@ -2,6 +2,7 @@ export interface Mood {
   id: string;
   emoji: string;
   label: string;
+  color: string;
 }
 
 export const MOODS: Mood[] = [

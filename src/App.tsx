@@ -176,7 +176,7 @@ function HomePage() {
       if (aUpcoming !== bUpcoming) return aUpcoming - bUpcoming;
       return aUpcoming === 0 ? a.t - b.t : b.t - a.t;
     })
-    .slice(0, 4)
+    .slice(0, 12)
     .map(x => x.event);
 
   const moodCards = MOODS.map((mood, index) => {
@@ -476,9 +476,7 @@ function MapPage() {
 
   const handleProvinceClick = (prov: string) => {
     setActiveProvince(prov);
-    setActiveCity('Todos');
     setProvinceSearch('');
-    setCitySearch('');
     setProvinceDropdownOpen(false);
     const params = new URLSearchParams(searchParams.toString());
     if (prov !== 'Todos') params.set('province', prov);

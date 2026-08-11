@@ -1000,7 +1000,7 @@ export const AdminDashboard: React.FC = () => {
                   <label className="flex items-center justify-center h-20 border-2 border-dashed rounded-lg cursor-pointer border-slate-300 bg-slate-50 hover:border-primary/60 hover:bg-primary/5 transition">
                     <ImagePlus size={20} className="text-slate-400" />
                     <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" multiple onChange={async e => {
-                      const files = Array.from(e.target.files || []);
+                      const files: File[] = e.target.files ? Array.from(e.target.files) : [];
                       for (const file of files) {
                         try {
                           const result = await uploadImage(file);

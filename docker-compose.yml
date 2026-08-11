@@ -63,6 +63,7 @@ services:
       SMTP_FROM: ${SMTP_FROM}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
       GEMINI_API_KEY: ${GEMINI_API_KEY}
+      SEND_EMAIL_REMINDERS: ${SEND_EMAIL_REMINDERS:-1}
     ports:
       - "8000:8000"
     volumes:

@@ -31,7 +31,7 @@ interface AuthContextType {
   resendVerification: (email: string) => Promise<void>;
   forgotPassword: (email: string) => Promise<void>;
   resetPassword: (token: string, password: string) => Promise<void>;
-  updateProfile: (data: { display_name?: string; photo_url?: string }) => Promise<void>;
+  updateProfile: (data: { display_name?: string; photo_url?: string; email_notifications?: boolean }) => Promise<void>;
   logout: () => void;
 }
 
@@ -103,7 +103,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(userData as unknown as AuthUser);
   };
 
-  const updateProfile = async (data: { display_name?: string; photo_url?: string }) => {
+  const updateProfile = async (data: { display_name?: string; photo_url?: string; email_notifications?: boolean }) => {
     const updated = await apiUpdateProfile(data);
     setUser(updated as unknown as AuthUser);
   };

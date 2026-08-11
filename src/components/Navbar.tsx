@@ -282,7 +282,7 @@ export const Navbar: React.FC = () => {
                     <Avatar className="h-9 w-9 cursor-pointer border-2 border-transparent hover:border-primary transition-all">
                       <AvatarImage src={user.photo_url || ''} />
                       <AvatarFallback className="bg-primary/15 text-primary">
-                        {(user as any).display_name?.charAt(0) || user_email?.charAt(0) || 'U'}
+                        {(user as any).display_name?.charAt(0) || user?.email?.charAt(0) || 'U'}
                       </AvatarFallback>
                     </Avatar>
                   </DropdownMenuTrigger>

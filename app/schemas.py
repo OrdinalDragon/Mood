@@ -94,6 +94,7 @@ class UserResponse(BaseModel):
     photo_url: Optional[str] = None
     created_at: Optional[datetime] = None
     favorites: list[str] = []
+    email_notifications: bool = True
 
 
 class UserAdminResponse(BaseModel):

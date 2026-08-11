@@ -187,6 +187,7 @@ async def get_me(current_user: User = Depends(get_current_user)):
 class UpdateProfileRequest(BaseModel):
     display_name: Optional[str] = None
     photo_url: Optional[str] = None
+    email_notifications: Optional[bool] = None
 
 
 @router.put("/me", response_model=UserResponse)
@@ -202,6 +203,8 @@ async def update_profile(
         current_user.display_name = name
     if data.photo_url is not None:
         current_user.photo_url = data.photo_url.strip() or None
+    if data.email_notifications is not None:
+        current_user.email_notifications = data.email_notifications
     await current_user.save()
     return current_user
 

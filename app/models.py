@@ -47,6 +47,7 @@ class User(Document):
     google_id: Optional[str] = None
     reset_token: Optional[str] = None
     favorites: list = []
+    email_notifications: bool = True
     banned: bool = False
     banned_at: Optional[datetime] = None
 

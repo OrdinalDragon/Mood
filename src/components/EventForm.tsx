@@ -492,7 +492,7 @@ export const EventForm: React.FC = () => {
                   className="hidden"
                   multiple
                   onChange={async (e) => {
-                    const files = Array.from(e.target.files || []);
+                    const files: File[] = e.target.files ? Array.from(e.target.files) : [];
                     if (!files.length) return;
                     for (const file of files) {
                       try {

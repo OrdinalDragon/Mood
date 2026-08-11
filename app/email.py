@@ -70,3 +70,66 @@ def send_reset_password_email(to: str, token: str):
 </body>
 </html>"""
     send_email(to, "Restablecé tu contraseña — MOOD", body_html, body_text)
+
+
+def send_event_reminder_email(to: str, display_name: str, event, countdown: str):
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost")
+    link = f"{frontend_url}/event/{event.id}"
+    event_title = event.title or "tu evento"
+    location_name = ""
+    if event.location and (event.location.get("name") or event.location.get("address")):
+        location_name = event.location.get("name") or event.location.get("address")
+    date_str = event.date.strftime("%A %d/%m a las %H:%M") if event.date else ""
+    body_text = (
+        f"Hola {display_name or 'MOOD user'}, «{event_title}» es {countdown.lower()}.\n"
+        f"{date_str}\n"
+        f"{location_name}\n"
+        f"Ver evento: {link}"
+    )
+    body_html = f"""\
+<!DOCTYPE html>
+<html>
+<body style="font-family:sans-serif;padding:20px;max-width:600px;margin:auto">
+  <div style="text-align:center;margin-bottom:24px">
+    <h1 style="color:#1e293b;margin:0">MOOD</h1>
+    <p style="color:#64748b">Descubrí eventos según tu estado de ánimo</p>
+  </div>
+  <div style="background:#f8fafc;padding:32px;border-radius:12px;text-align:center">
+    <h2 style="color:#1e293b;margin:0 0 8px">Recordatorio de evento</h2>
+    <p style="color:#64748b;margin:0 0 16px">Hola {display_name or 'MOOD user'}!</p>
+    <p style="font-size:20px;font-weight:700;color:#1e293b;margin:0 0 4px">«{event_title}»</p>
+    <p style="font-size:16px;font-weight:600;color:#6366f1;margin:0 0 16px">{countdown}</p>
+    <p style="color:#475569;margin:0 0 24px">{date_str}<br>{location_name}</p>
+    <a href="{link}" style="display:inline-block;padding:14px 32px;background:#6366f1;color:#fff;text-decoration:none;border-radius:8px;font-size:16px;font-weight:600">Ver evento</a>
+  </div>
+  <p style="color:#94a3b8;font-size:12px;text-align:center;margin-top:24px">Podés desactivar estos recordatorios desde tu perfil en MOOD.</p>
+</body>
+</html>"""
+    send_email(to, f"Recordatorio: «{event_title}» — {countdown}", body_html, body_text)
+
+
+def send_events_summary_email(to: str, display_name: str, count: int):
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost")
+    link = f"{frontend_url}/favorites"
+    evento = "evento" if count == 1 else "eventos"
+    body_text = (
+        f"Hola {display_name or 'MOOD user'}, tenés {count} {evento} favoritos esta semana.\n"
+        f"Ver todos: {link}"
+    )
+    body_html = f"""\
+<!DOCTYPE html>
+<html>
+<body style="font-family:sans-serif;padding:20px;max-width:600px;margin:auto">
+  <div style="text-align:center;margin-bottom:24px">
+    <h1 style="color:#1e293b;margin:0">MOOD</h1>
+    <p style="color:#64748b">Descubrí eventos según tu estado de ánimo</p>
+  </div>
+  <div style="background:#f8fafc;padding:32px;border-radius:12px;text-align:center">
+    <h2 style="color:#1e293b;margin:0 0 8px">Muchos eventos esta semana</h2>
+    <p style="color:#475569;margin:0 0 24px">Tenés {count} {evento} favoritos cerca en los próximos días. No te los pierdas.</p>
+    <a href="{link}" style="display:inline-block;padding:14px 32px;background:#6366f1;color:#fff;text-decoration:none;border-radius:8px;font-size:16px;font-weight:600">Ver mis eventos</a>
+  </div>
+  <p style="color:#94a3b8;font-size:12px;text-align:center;margin-top:24px">Podés desactivar estos recordatorios desde tu perfil en MOOD.</p>
+</body>
+</html>"""
+    send_email(to, f"Tenés {count} {evento} favoritos esta semana — MOOD", body_html, body_text)
