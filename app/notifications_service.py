@@ -257,6 +257,42 @@ async def notify_event_status(event: Event, action: str):
 
 
 # ============================================================
+# RECLAMOS - un usuario quiere ser el organizador
+# ============================================================
+async def notify_admins_claim_request(event: Event, claimant: User):
+    """Avisa a todos los admins/moderadores que hay un reclamo."""
+    admins = await User.find({"role": {"$in": list(ADMIN_ROLES)}}).to_list()
+    for admin in admins:
+        if admin.uid == claimant.uid:
+            continue
+        await create_notification(
+            admin.uid,
+            "event_claim_requested",
+            "Reclamo de evento",
+            f"{claimant.display_name or claimant.email} quiere reclamar «{event.title}»",
+            link="/admin?tab=claims",
+            event_id=event.id,
+        )
+
+
+async def notify_claim_decision(event: Event, claimant_uid: str, approved: bool):
+    if approved:
+        title = "¡Evento reclamado!"
+        message = f"¡Sos el organizador de «{event.title}»! Ya podés responder las valoraciones."
+    else:
+        title = "Reclamo rechazado"
+        message = f"Tu reclamo de «{event.title}» no fue aprobado."
+    await create_notification(
+        claimant_uid,
+        "event_claim_approved" if approved else "event_claim_rejected",
+        title,
+        message,
+        link=f"/event/{event.id}",
+        event_id=event.id,
+    )
+
+
+# ============================================================
 # CLEANUP - un evento fue eliminado
 # ============================================================
 async def cleanup_favorite_near_for_event(event_id: str):

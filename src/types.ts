@@ -103,6 +103,30 @@ export interface Event {
   updated_at?: any;
   avg_rating?: number | null;
   rating_count?: number | null;
+  claimable?: boolean;
+  claim_status?: 'none' | 'pending';
+  claim_requested_by?: string | null;
+}
+
+
+/**
+ * ClaimPending - Reclamo de un evento por un usuario (para el admin).
+ */
+export interface ClaimPending {
+  id: string;
+  title: string;
+  date: any;
+  location: Location;
+  cover_image?: string | null;
+  image_url?: string | null;
+  claim_requested_by: string;
+  claim_requested_at?: any;
+  claimant: {
+    uid: string;
+    email: string | null;
+    display_name: string | null;
+    photo_url?: string | null;
+  } | null;
 }
 
 

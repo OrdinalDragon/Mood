@@ -14,10 +14,10 @@
 import React, { useEffect, useState } from 'react';
 
 // API
-import { getPendingEvents, approveEvent, rejectEvent, deleteEvent, updateEvent, uploadImage, getUsers, updateUserRole, deleteUser, banUser, getBans, unbanUser, getAdsAdmin, createAd, updateAd, deleteAd } from '../lib/api';
+import { getPendingEvents, approveEvent, rejectEvent, deleteEvent, updateEvent, uploadImage, getUsers, updateUserRole, deleteUser, banUser, getBans, unbanUser, getAdsAdmin, createAd, updateAd, deleteAd, getPendingClaims, approveClaim, rejectClaim } from '../lib/api';
 
 // Tipos
-import { Event, UserAdmin, Ad, Ban } from '../types';
+import { Event, UserAdmin, Ad, Ban, ClaimPending } from '../types';
 
 // UI Components
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,7 +30,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 
 // Iconos
-import { Check, X, Trash2, ExternalLink, Pencil, MapPin, Upload, ImagePlus, Users, Calendar, Megaphone, Plus, Hammer, Ban as BanIcon, ShieldOff } from 'lucide-react';
+import { Check, X, Trash2, ExternalLink, Pencil, MapPin, Upload, ImagePlus, Users, Calendar, Megaphone, Plus, Hammer, Ban as BanIcon, ShieldOff, Hand } from 'lucide-react';
 
 // Utils
 import { format } from 'date-fns';
@@ -72,7 +72,7 @@ const ROLE_COLORS: Record<string, string> = {
 
 export const AdminDashboard: React.FC = () => {
   // ---- ESTADOS ----
-  const [tab, setTab] = useState<'events' | 'users' | 'bans' | 'ads'>('events');
+  const [tab, setTab] = useState<'events' | 'users' | 'bans' | 'ads' | 'claims'>('events');
 
   // Eventos
   const [pendingEvents, setPendingEvents] = useState<Event[]>([]);
@@ -80,6 +80,10 @@ export const AdminDashboard: React.FC = () => {
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [editForm, setEditForm] = useState<Partial<Event>>({});
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  // Reclamos
+  const [claims, setClaims] = useState<ClaimPending[]>([]);
+  const [claimsLoading, setClaimsLoading] = useState(false);
 
   // Usuarios
   const [users, setUsers] = useState<UserAdmin[]>([]);
@@ -111,7 +115,28 @@ export const AdminDashboard: React.FC = () => {
     };
 
     loadEvents();
+
+    // Soporte para abrir la pestaña directo desde una notificación (?tab=claims)
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('tab') === 'claims') setTab('claims');
   }, []);  // [] → solo una vez
+
+  // ---- CARGAR RECLAMOS ----
+  const loadClaims = async () => {
+    setClaimsLoading(true);
+    try {
+      const data = await getPendingClaims();
+      setClaims(data);
+    } catch (error) {
+      toast.error('Error al cargar los reclamos');
+    } finally {
+      setClaimsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (tab === 'claims') loadClaims();
+  }, [tab]);
 
   // ---- CARGAR USUARIOS ----
   const loadUsers = async () => {
@@ -258,6 +283,33 @@ export const AdminDashboard: React.FC = () => {
       toast.success("Evento rechazado");
     } catch (error) {
       toast.error("Error al rechazar");
+    }
+  };
+
+  /**
+   * handleApproveClaim - Aprueba el reclamo de un organizador
+   */
+  const handleApproveClaim = async (claim: ClaimPending) => {
+    if (!window.confirm(`¿Transferir la organización de "${claim.title}" a ${claim.claimant?.display_name || claim.claimant?.email || 'este usuario'}?`)) return;
+    try {
+      await approveClaim(claim.id);
+      setClaims(prev => prev.filter(c => c.id !== claim.id));
+      toast.success("Reclamo aprobado");
+    } catch (error) {
+      toast.error("Error al aprobar el reclamo");
+    }
+  };
+
+  /**
+   * handleRejectClaim - Rechaza el reclamo de un organizador
+   */
+  const handleRejectClaim = async (claim: ClaimPending) => {
+    try {
+      await rejectClaim(claim.id);
+      setClaims(prev => prev.filter(c => c.id !== claim.id));
+      toast.success("Reclamo rechazado");
+    } catch (error) {
+      toast.error("Error al rechazar el reclamo");
     }
   };
 
@@ -432,6 +484,20 @@ export const AdminDashboard: React.FC = () => {
           )}
         </button>
         <button
+          onClick={() => setTab('claims')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${
+            tab === 'claims'
+              ? 'bg-primary/10 text-primary border-b-2 border-primary'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+          }`}
+        >
+          <Hand size={16} />
+          Reclamos
+          {claims.length > 0 && (
+            <Badge className="ml-1 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 text-xs px-1.5 py-0">{claims.length}</Badge>
+          )}
+        </button>
+        <button
           onClick={() => setTab('ads')}
           className={`flex items-center gap-2 px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${
             tab === 'ads'
@@ -564,6 +630,88 @@ export const AdminDashboard: React.FC = () => {
           ))}
         </div>
       )}
+        </>
+      )}
+
+      {/* ---- TAB: RECLAMOS ---- */}
+      {tab === 'claims' && (
+        <>
+        {claimsLoading ? (
+          <div className="flex justify-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          </div>
+        ) : claims.length === 0 ? (
+          <Card className="text-center py-20 bg-slate-50 border-dashed">
+            <CardContent>
+              <p className="text-slate-500 dark:text-slate-400 text-lg">
+                No hay reclamos pendientes.
+              </p>
+              <p className="text-sm text-slate-400 mt-1">
+                Cuando alguien reclame un evento de MOOD, aparecerá acá para aprobar o rechazar.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 gap-6">
+            {claims.map((claim) => (
+              <Card key={claim.id} className="overflow-hidden border-slate-200 hover:shadow-md transition-shadow">
+                <div className="flex flex-col md:flex-row">
+                  <div className="w-full md:w-56 h-40 md:h-auto bg-slate-100">
+                    <img
+                      src={claim.cover_image || claim.image_url || 'https://picsum.photos/seed/mood/400/300'}
+                      alt={claim.title}
+                      className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
+                  <div className="flex-1 p-6">
+                    <Badge className="mb-2 bg-amber-100 text-amber-700 border-amber-200">
+                      Reclamo pendiente
+                    </Badge>
+                    <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-1">
+                      {claim.title}
+                    </h3>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+                      {format(parseEventDate(claim.date), "PPP", { locale: es })} · {claim.location?.address}, {claim.location?.city}
+                    </p>
+                    <div className="flex items-center gap-3 mb-5">
+                      <div className="h-9 w-9 rounded-full bg-primary/15 flex items-center justify-center overflow-hidden">
+                        {claim.claimant?.photo_url ? (
+                          <img src={claim.claimant.photo_url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                        ) : (
+                          <Users size={16} className="text-primary" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">Reclamado por</p>
+                        <p className="font-medium text-slate-900 dark:text-white">
+                          {claim.claimant?.display_name || 'Usuario'} <span className="text-xs text-slate-400">({claim.claimant?.email || '—'})</span>
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-3">
+                      <Button
+                        onClick={() => handleApproveClaim(claim)}
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        <Check size={18} className="mr-2" />
+                        Aprobar
+                      </Button>
+                      <Button
+                        onClick={() => handleRejectClaim(claim)}
+                        variant="outline"
+                        className="border-red-200 text-red-600 hover:bg-red-50"
+                      >
+                        <X size={18} className="mr-2" />
+                        Rechazar
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
         </>
       )}
 

@@ -10,6 +10,23 @@ from app.notifications_service import sync_favorite_near, archive_past_events
 logger = logging.getLogger(__name__)
 
 SCAN_INTERVAL_SECONDS = 60 * 60  # 1 hora
+SCRAPE_INTERVAL_SECONDS = 6 * 60 * 60  # 6 horas
+
+
+async def scrape_events_once():
+    from app.scraper import run_scrape
+
+    try:
+        result = await run_scrape()
+        logger.info("scrape result: %s", result)
+    except Exception as e:
+        logger.error(f"scrape error: {e}")
+
+
+async def scrape_loop():
+    while True:
+        await scrape_events_once()
+        await asyncio.sleep(SCRAPE_INTERVAL_SECONDS)
 
 
 async def scan_favorite_near_once():

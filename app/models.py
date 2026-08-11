@@ -28,6 +28,8 @@ class Event(Document):
     is_outdoor: bool = False
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    claim_requested_by: Optional[str] = None
+    claim_requested_at: Optional[datetime] = None
 
     class Settings:
         name = "events"

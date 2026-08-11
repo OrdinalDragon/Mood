@@ -3,7 +3,7 @@
  * Helper para hacer requests al API de FastAPI.
  */
 
-import { Event, UserProfile, UserAdmin, Ad, Ban, Notification, Review, UserRating } from '../types';
+import { Event, UserProfile, UserAdmin, Ad, Ban, Notification, Review, UserRating, ClaimPending } from '../types';
 
 // URL del API desde variables de entorno
 const API_URL = import.meta.env.VITE_API_URL || '/api';
@@ -91,6 +91,32 @@ export async function updateEvent(id: string, data: Partial<Event>): Promise<Eve
 // Obtener un evento específico
 export async function getEvent(id: string): Promise<Event> {
   return apiFetch<Event>(`/events/${id}`);
+}
+
+// Reclamar un evento subido por MOOD (el usuario pasa a ser el organizador propuesto)
+export async function claimEvent(id: string): Promise<Event> {
+  return apiFetch<Event>(`/events/${id}/claim`, {
+    method: 'POST',
+  });
+}
+
+// Listar reclamos pendientes (admin only)
+export async function getPendingClaims(): Promise<ClaimPending[]> {
+  return apiFetch<ClaimPending[]>('/events/claims/pending');
+}
+
+// Aprobar un reclamo (admin only)
+export async function approveClaim(id: string): Promise<Event> {
+  return apiFetch<Event>(`/events/${id}/claim/approve`, {
+    method: 'PATCH',
+  });
+}
+
+// Rechazar un reclamo (admin only)
+export async function rejectClaim(id: string): Promise<Event> {
+  return apiFetch<Event>(`/events/${id}/claim/reject`, {
+    method: 'PATCH',
+  });
 }
 
 // Subir imagen al servidor

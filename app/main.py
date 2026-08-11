@@ -14,14 +14,20 @@ from app.database import init_db, close_db
 async def lifespan(app: FastAPI):
     await init_db()
 
-    from app.scheduler import notification_scan_loop
+    from app.scheduler import notification_scan_loop, scrape_loop
     scan_task = asyncio.create_task(notification_scan_loop())
+    scrape_task = asyncio.create_task(scrape_loop())
 
     yield
 
     scan_task.cancel()
     try:
         await scan_task
+    except asyncio.CancelledError:
+        pass
+    scrape_task.cancel()
+    try:
+        await scrape_task
     except asyncio.CancelledError:
         pass
     await close_db()

@@ -8,9 +8,13 @@ from app.models import Event, User
 from app.schemas import EventCreate, EventUpdate, EventResponse, EventListResponse
 from app.routes.auth import get_current_user
 from app.routes.reviews import get_rating_map
+from beanie.odm.operators.find.comparison import In
+
 from app.notifications_service import (
     sync_admin_pending_notifications,
     notify_event_status,
+    notify_admins_claim_request,
+    notify_claim_decision,
     cleanup_favorite_near_for_event,
 )
 from datetime import datetime, timedelta, timezone
@@ -31,6 +35,28 @@ ARG_TZ = timezone(timedelta(hours=-3))
 
 def arg_now():
     return datetime.now(ARG_TZ).replace(tzinfo=None)
+
+MOOD_EMAIL = "mood@mood.com"
+_mood_uid_cache = None
+
+
+async def get_mood_uid():
+    """UID del usuario sistema MOOD (con cache)."""
+    global _mood_uid_cache
+    if _mood_uid_cache:
+        return _mood_uid_cache
+    mood = await User.find_one(User.email == MOOD_EMAIL)
+    if mood:
+        _mood_uid_cache = mood.uid
+    return _mood_uid_cache
+
+
+def enrich_claim(event, data, mood_uid):
+    claimable = bool(mood_uid) and event.created_by == mood_uid
+    data['claimable'] = claimable
+    data['claim_status'] = 'pending' if event.claim_requested_by else 'none'
+    data['claim_requested_by'] = event.claim_requested_by
+    return data
 
 
 @router.get("/", response_model=List[EventListResponse])
@@ -191,6 +217,9 @@ async def list_events(
         if rating:
             d['avg_rating'] = rating['avg']
             d['rating_count'] = rating['count']
+    mood_uid = await get_mood_uid()
+    for e, d in zip(events, result):
+        enrich_claim(e, d, mood_uid)
     return result
 
 
@@ -240,6 +269,9 @@ async def get_my_events(current_user: User = Depends(get_current_user)):
         if rating:
             d['avg_rating'] = rating['avg']
             d['rating_count'] = rating['count']
+    mood_uid = await get_mood_uid()
+    for e, d in zip(events, result):
+        enrich_claim(e, d, mood_uid)
     return result
 
 
@@ -255,6 +287,110 @@ async def get_event(event_id: str):
     if rating:
         data['avg_rating'] = rating['avg']
         data['rating_count'] = rating['count']
+    mood_uid = await get_mood_uid()
+    enrich_claim(event, data, mood_uid)
+    return data
+
+
+@router.post("/{event_id}/claim", response_model=EventResponse)
+async def claim_event(event_id: str, current_user: User = Depends(get_current_user)):
+    """Un usuario reclama la organización de un evento subido por MOOD."""
+    event = await Event.find_one(Event.id == event_id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    mood_uid = await get_mood_uid()
+    if not mood_uid or event.created_by != mood_uid:
+        raise HTTPException(status_code=400, detail="Este evento no es reclamable")
+    if event.claim_requested_by:
+        raise HTTPException(status_code=400, detail="Este evento ya tiene un reclamo en revisión")
+    event.claim_requested_by = current_user.uid
+    event.claim_requested_at = datetime.utcnow()
+    await event.save()
+    await notify_admins_claim_request(event, current_user)
+    data = event.model_dump(by_alias=False)
+    enrich_claim(event, data, mood_uid)
+    return data
+
+
+@router.get("/claims/pending")
+async def pending_claims(current_user: User = Depends(get_current_user)):
+    """Lista de eventos con reclamos pendientes. Solo admins."""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Se requieren permisos de administrador")
+    events = await Event.find({"claim_requested_by": {"$ne": None}}).sort("-claim_requested_at").to_list()
+    uids = [e.claim_requested_by for e in events if e.claim_requested_by]
+    users = {}
+    if uids:
+        for u in await User.find(In(User.uid, uids)).to_list():
+            users[u.uid] = u
+    result = []
+    for e in events:
+        claimant = users.get(e.claim_requested_by)
+        result.append({
+            'id': e.id,
+            'title': e.title,
+            'date': e.date,
+            'location': e.location,
+            'cover_image': e.cover_image,
+            'image_url': e.image_url,
+            'claim_requested_by': e.claim_requested_by,
+            'claim_requested_at': e.claim_requested_at,
+            'claimant': {
+                'uid': e.claim_requested_by,
+                'email': claimant.email if claimant else None,
+                'display_name': claimant.display_name if claimant else None,
+                'photo_url': claimant.photo_url if claimant else None,
+            } if claimant else None,
+        })
+    return result
+
+
+@router.patch("/{event_id}/claim/approve", response_model=EventResponse)
+async def approve_claim(event_id: str, current_user: User = Depends(get_current_user)):
+    """Aprueba el reclamo: transfiere la organización al reclamante."""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Se requieren permisos de administrador")
+    event = await Event.find_one(Event.id == event_id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    if not event.claim_requested_by:
+        raise HTTPException(status_code=400, detail="Este evento no tiene un reclamo pendiente")
+    claimant_uid = event.claim_requested_by
+    claimant = await User.find_one(User.uid == claimant_uid)
+    event.created_by = claimant_uid
+    event.author_name = (
+        claimant.display_name
+        if claimant and claimant.display_name
+        else (claimant.email if claimant else claimant_uid)
+    )
+    event.claim_requested_by = None
+    event.claim_requested_at = None
+    await event.save()
+    await notify_claim_decision(event, claimant_uid, True)
+    data = event.model_dump(by_alias=False)
+    mood_uid = await get_mood_uid()
+    enrich_claim(event, data, mood_uid)
+    return data
+
+
+@router.patch("/{event_id}/claim/reject", response_model=EventResponse)
+async def reject_claim(event_id: str, current_user: User = Depends(get_current_user)):
+    """Rechaza el reclamo: el evento vuelve a ser reclamable."""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Se requieren permisos de administrador")
+    event = await Event.find_one(Event.id == event_id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    if not event.claim_requested_by:
+        raise HTTPException(status_code=400, detail="Este evento no tiene un reclamo pendiente")
+    claimant_uid = event.claim_requested_by
+    event.claim_requested_by = None
+    event.claim_requested_at = None
+    await event.save()
+    await notify_claim_decision(event, claimant_uid, False)
+    data = event.model_dump(by_alias=False)
+    mood_uid = await get_mood_uid()
+    enrich_claim(event, data, mood_uid)
     return data
 
 

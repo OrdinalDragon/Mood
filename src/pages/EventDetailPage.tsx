@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Event } from '../types';
-import { getEvent, updateEvent, uploadImage, addFavorite, removeFavorite, getUserRating } from '../lib/api';
+import { getEvent, updateEvent, uploadImage, addFavorite, removeFavorite, getUserRating, claimEvent } from '../lib/api';
 import { EventReviews } from '../components/EventReviews';
 import { StarRatingDisplay } from '../components/StarRating';
 import { UserRating } from '../types';
@@ -64,6 +64,7 @@ const [editForm, setEditForm] = useState<Partial<Event>>({});
 const [galleryOpen, setGalleryOpen] = useState(false);
 const [selectedImage, setSelectedImage] = useState('');
 const [organizerRating, setOrganizerRating] = useState<UserRating | null>(null);
+const [claiming, setClaiming] = useState(false);
 
   useEffect(() => {
     if (!id) {
@@ -222,6 +223,26 @@ const [organizerRating, setOrganizerRating] = useState<UserRating | null>(null);
       </div>
     );
   }
+
+  const handleClaim = async () => {
+    if (!event) return;
+    if (!user) {
+      toast.error('Por favor, registrate o inicia sesión para reclamar este evento');
+      return;
+    }
+    if (event.claim_status === 'pending') return;
+    setClaiming(true);
+    try {
+      const updated = await claimEvent(event.id);
+      setEvent((prev) => (prev ? { ...prev, ...updated } : prev));
+      toast.success('Reclamo enviado. Un administrador lo revisará pronto.');
+    } catch (err) {
+      console.error('Error claiming event:', err);
+      toast.error('No se pudo reclamar este evento');
+    } finally {
+      setClaiming(false);
+    }
+  };
 
   const handleShare = async () => {
     if (navigator.share) {
@@ -430,6 +451,40 @@ const [organizerRating, setOrganizerRating] = useState<UserRating | null>(null);
                 </div>
               </CardContent>
             </Card>
+
+            {event.claimable && (
+              <Card className="border-dashed border-primary/60 bg-primary/5">
+                <CardContent className="p-4">
+                  {event.claim_status === 'pending' && user && event.claim_requested_by === user.uid ? (
+                    <>
+                      <div className="flex items-center gap-2 mb-1">
+                        <Clock size={16} className="text-primary" />
+                        <p className="font-medium text-slate-900 dark:text-white">Reclamo enviado</p>
+                      </div>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">
+                        Tu reclamo está en espera de aprobación por un administrador.
+                      </p>
+                    </>
+                  ) : event.claim_status === 'pending' ? (
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      Este evento ya tiene un reclamo en revisión.
+                    </p>
+                  ) : (
+                    <>
+                      <p className="text-sm font-medium text-slate-900 dark:text-white mb-1">
+                        ¿Sos el organizador de este evento? Reclamalo aquí
+                      </p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+                        Un administrador revisará tu reclamo y, si se aprueba, vas a poder responder las valoraciones.
+                      </p>
+                      <Button size="sm" className="w-full" onClick={handleClaim} disabled={claiming}>
+                        {claiming ? 'Enviando...' : 'Reclamar evento'}
+                      </Button>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </div>

@@ -68,6 +68,9 @@ class EventResponse(BaseModel):
     author_name: Optional[str] = None
     avg_rating: Optional[float] = None
     rating_count: Optional[int] = None
+    claimable: Optional[bool] = None
+    claim_status: Optional[str] = None
+    claim_requested_by: Optional[str] = None
 
 class EventListResponse(BaseModel):
     id: str
