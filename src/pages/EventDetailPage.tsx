@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Event } from '../types';
-import { getEvent, updateEvent, uploadImage, addFavorite, removeFavorite } from '../lib/api';
+import { getEvent, updateEvent, uploadImage, addFavorite, removeFavorite, getUserRating } from '../lib/api';
+import { EventReviews } from '../components/EventReviews';
+import { StarRatingDisplay } from '../components/StarRating';
+import { UserRating } from '../types';
 import { categoryLabels, sampleEvents } from '../lib/sampleEvents';
 import { useAuth } from '../hooks/useAuth';
 import { toLocalDatetimeString } from '../lib/utils';
@@ -60,6 +63,7 @@ const [editOpen, setEditOpen] = useState(false);
 const [editForm, setEditForm] = useState<Partial<Event>>({});
 const [galleryOpen, setGalleryOpen] = useState(false);
 const [selectedImage, setSelectedImage] = useState('');
+const [organizerRating, setOrganizerRating] = useState<UserRating | null>(null);
 
   useEffect(() => {
     if (!id) {
@@ -151,6 +155,14 @@ const [selectedImage, setSelectedImage] = useState('');
       setIsFavorite((user.favorites || []).includes(id));
     }
   }, [id, user]);
+
+  useEffect(() => {
+    if (event?.created_by) {
+      getUserRating(event.created_by)
+        .then(setOrganizerRating)
+        .catch(() => setOrganizerRating(null));
+    }
+  }, [event?.created_by]);
 
   const handleAttend = () => {
     if (!id) return;
@@ -317,6 +329,8 @@ const [selectedImage, setSelectedImage] = useState('');
                 </div>
               </CardContent>
             </Card>
+
+            <EventReviews eventId={event.id} canReply={!!user && (user.uid === event.created_by || isAdmin)} />
           </div>
 
           <div className="space-y-4">
@@ -329,6 +343,14 @@ const [selectedImage, setSelectedImage] = useState('');
                   <div>
                     <p className="text-sm text-slate-500 dark:text-slate-400">Organizado por</p>
                     <p className="font-medium text-slate-900 dark:text-white">{event.author_name}</p>
+                    {organizerRating && organizerRating.rating_count > 0 && organizerRating.avg_rating != null && (
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <StarRatingDisplay value={organizerRating.avg_rating} size={13} />
+                        <span className="text-xs text-muted-foreground">
+                          {organizerRating.avg_rating.toFixed(1).replace('.', ',')} · {organizerRating.rating_count} {organizerRating.rating_count === 1 ? 'valoración' : 'valoraciones'}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
 

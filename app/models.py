@@ -87,6 +87,25 @@ class Ad(Document):
         name = "ads"
 
 
+class Review(Document):
+    id: str
+    event_id: str
+    user_id: str
+    author_name: Optional[str] = None
+    author_photo: Optional[str] = None
+    rating: int = 5
+    comment: Optional[str] = None
+    reply: Optional[str] = None
+    replied_by: Optional[str] = None
+    replied_by_name: Optional[str] = None
+    replied_at: Optional[datetime] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    class Settings:
+        name = "reviews"
+
+
 class Notification(Document):
     id: str
     user_id: str

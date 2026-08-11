@@ -66,6 +66,8 @@ class EventResponse(BaseModel):
     status: str
     created_by: str
     author_name: Optional[str] = None
+    avg_rating: Optional[float] = None
+    rating_count: Optional[int] = None
 
 class EventListResponse(BaseModel):
     id: str
@@ -81,6 +83,8 @@ class EventListResponse(BaseModel):
     is_outdoor: Optional[bool] = False
     distance: Optional[float] = None
     status: str
+    avg_rating: Optional[float] = None
+    rating_count: Optional[int] = None
 
 class UserResponse(BaseModel):
     uid: str
@@ -115,3 +119,40 @@ class NotificationResponse(BaseModel):
     event_count: Optional[int] = None
     read: bool = False
     created_at: Optional[datetime] = None
+
+
+class ReviewCreate(BaseModel):
+    rating: int
+    comment: Optional[str] = None
+
+
+class ReviewReply(BaseModel):
+    reply: str
+
+
+class ReviewResponse(BaseModel):
+    id: str
+    event_id: str
+    user_id: str
+    author_name: Optional[str] = None
+    author_photo: Optional[str] = None
+    rating: int
+    comment: Optional[str] = None
+    reply: Optional[str] = None
+    replied_by: Optional[str] = None
+    replied_by_name: Optional[str] = None
+    replied_at: Optional[datetime] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    event: Optional[dict] = None
+
+
+class UserRatingResponse(BaseModel):
+    user_id: str
+    avg_rating: Optional[float] = None
+    rating_count: int = 0
+
+
+class EventRatingSummary(BaseModel):
+    avg_rating: Optional[float] = None
+    rating_count: int = 0

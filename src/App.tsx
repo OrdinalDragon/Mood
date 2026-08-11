@@ -20,12 +20,12 @@ import { ThemeProvider } from './contexts/ThemeContext';
 
 // Componentes de la interfaz
 import { Navbar } from './components/Navbar';
-import { Hero } from './components/Hero';
 import { EventMap } from './components/EventMap';
 import { EventForm } from './components/EventForm';
 import { AdminDashboard } from './components/AdminDashboard';
 import { EventCalendar } from './components/EventCalendar';
 import { EventDetailPage } from './pages/EventDetailPage';
+import EventsPage from './pages/EventsPage';
 import { GiveawaysPage } from './pages/GiveawaysPage';
 import { TerminosYCondiciones } from './pages/TerminosYCondiciones';
 import { VerifyEmail } from './pages/VerifyEmail';
@@ -67,7 +67,7 @@ import { MOODS } from './lib/moods';
 
 /**
  * HomePage - Página principal
- * Muestra el Hero, mapa pequeño y eventos recomendados
+ * Muestra el splash de mood y los eventos recomendados
  */
 function HomePage() {
   const { mood: contextMood, setMood: setContextMood, clearMood } = useMood();
@@ -235,12 +235,8 @@ function HomePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div ref={contentRef}>
-        <Hero />
-      </div>
-
       <LayoutWithAds>
-        <div className="container mx-auto px-4 py-12">
+        <div ref={contentRef} className="container mx-auto px-4 py-12">
           <div className="mb-16">
             <div className="flex flex-col md:flex-row justify-between items-end mb-8 gap-4">
               <div>
@@ -812,6 +808,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/map" element={<MapPage />} />
+            <Route path="/events" element={<EventsPage />} />
             <Route path="/event/:id" element={<EventDetailPage />} />
             <Route path="/calendar" element={<EventCalendar />} />
             <Route path="/submit" element={<EventForm />} />

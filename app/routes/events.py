@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Header
 from app.models import Event, User
 from app.schemas import EventCreate, EventUpdate, EventResponse, EventListResponse
 from app.routes.auth import get_current_user
+from app.routes.reviews import get_rating_map
 from app.notifications_service import (
     sync_admin_pending_notifications,
     notify_event_status,
@@ -184,6 +185,12 @@ async def list_events(
         if dist is not None:
             d['distance'] = dist
         result.append(d)
+    rmap = await get_rating_map([d['id'] for d in result])
+    for d in result:
+        rating = rmap.get(d['id'])
+        if rating:
+            d['avg_rating'] = rating['avg']
+            d['rating_count'] = rating['count']
     return result
 
 
@@ -215,7 +222,7 @@ async def get_event_counts():
 async def get_my_events(current_user: User = Depends(get_current_user)):
     """Lista los eventos creados por el usuario autenticado."""
     events = await Event.find(Event.created_by == current_user.uid).sort("-date").to_list()
-    return [
+    result = [
         {
             'id': e.id, 'title': e.title, 'date': e.date, 'end_date': e.end_date,
             'location': e.location, 'category': e.category,
@@ -227,6 +234,13 @@ async def get_my_events(current_user: User = Depends(get_current_user)):
         }
         for e in events
     ]
+    rmap = await get_rating_map([d['id'] for d in result])
+    for d in result:
+        rating = rmap.get(d['id'])
+        if rating:
+            d['avg_rating'] = rating['avg']
+            d['rating_count'] = rating['count']
+    return result
 
 
 @router.get("/{event_id}", response_model=EventResponse)
@@ -235,7 +249,13 @@ async def get_event(event_id: str):
     event = await Event.find_one(Event.id == event_id)
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
-    return event
+    rmap = await get_rating_map([event.id])
+    rating = rmap.get(event.id)
+    data = event.model_dump(by_alias=False)
+    if rating:
+        data['avg_rating'] = rating['avg']
+        data['rating_count'] = rating['count']
+    return data
 
 
 @router.post("/", response_model=EventResponse, status_code=status.HTTP_201_CREATED)

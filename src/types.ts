@@ -100,6 +100,8 @@ export interface Event {
   is_outdoor?: boolean;
   created_at: any;
   updated_at?: any;
+  avg_rating?: number | null;
+  rating_count?: number | null;
 }
 
 
@@ -203,6 +205,42 @@ export interface Ad {
   gradient?: string | null;
   badge_color?: string | null;
   footer?: string | null;
+}
+
+/**
+ * Review - Valoración y comentario de un usuario sobre un evento.
+ * rating va de 1 a 10; se muestra como 5 estrellas con mitades.
+ */
+export interface Review {
+  id: string;
+  event_id: string;
+  user_id: string;
+  author_name?: string | null;
+  author_photo?: string | null;
+  rating: number;
+  comment?: string | null;
+  reply?: string | null;
+  replied_by?: string | null;
+  replied_by_name?: string | null;
+  replied_at?: string | null;
+  created_at: string;
+  updated_at?: string | null;
+  event?: {
+    id: string;
+    title: string;
+    date?: string | null;
+    image_url?: string | null;
+    cover_image?: string | null;
+  } | null;
+}
+
+/**
+ * UserRating - Puntuación general de un organizador (agregado de sus eventos).
+ */
+export interface UserRating {
+  user_id: string;
+  avg_rating?: number | null;
+  rating_count: number;
 }
 
 

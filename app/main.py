@@ -63,6 +63,8 @@ from app.routes import ads
 app.include_router(ads.router)
 from app.routes import notifications
 app.include_router(notifications.router)
+from app.routes import reviews
+app.include_router(reviews.router)
 
 
 @app.get("/")

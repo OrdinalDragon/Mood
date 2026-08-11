@@ -20,7 +20,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
 // Iconos
-import { Calendar, MapPin, Heart } from 'lucide-react';
+import { Calendar, MapPin, Heart, Star } from 'lucide-react';
 
 // date-fns para fechas
 import { format } from 'date-fns';
@@ -150,6 +150,19 @@ const getCategoryColor = (cat: string): string => {
           <h3 className="font-bold text-card-foreground line-clamp-2 mb-2 group-hover:text-primary transition-colors">
             {event.title}
           </h3>
+          
+          {/* Valoración promedio */}
+          {event.avg_rating != null && (event.rating_count ?? 0) > 0 && (
+            <div className="flex items-center gap-1 text-xs mb-1.5">
+              <span className="flex items-center gap-0.5 text-amber-500">
+                {[1, 2, 3, 4, 5].map(i => (
+                  <Star key={i} size={11} className={i <= Math.round(event.avg_rating! / 2) ? 'fill-amber-400 text-amber-400' : 'text-slate-300 dark:text-slate-600'} />
+                ))}
+              </span>
+              <span className="font-semibold text-card-foreground">{event.avg_rating!.toFixed(1).replace('.', ',')}</span>
+              <span className="text-muted-foreground">({event.rating_count})</span>
+            </div>
+          )}
           
           {/* Fecha */}
           <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">

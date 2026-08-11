@@ -50,10 +50,10 @@ export const AdBanner: React.FC<AdBannerProps> = ({
         )}
         
         <div className="absolute bottom-0 left-0 right-0 p-3">
-          <p className="text-primary-foreground/80 text-xs font-medium uppercase tracking-wide">
+          <p className="text-white/80 text-xs font-medium uppercase tracking-wide">
             {subtitle}
           </p>
-          <h3 className={`font-bold text-primary-foreground ${isSidebar ? 'text-base' : 'text-lg'}`}>
+          <h3 className={`font-bold text-white ${isSidebar ? 'text-base' : 'text-lg'}`}>
             {title}
           </h3>
         </div>

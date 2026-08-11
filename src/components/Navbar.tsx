@@ -22,6 +22,11 @@ import { RegisterDialog } from './RegisterDialog';
 import { 
   MapPin, 
   Calendar as CalendarIcon, 
+  CalendarSearch,
+  LayoutGrid,
+  Sparkles,
+  Heart,
+  Menu,
   PlusCircle, 
   User as UserIcon, 
   LogOut, 
@@ -29,7 +34,9 @@ import {
   Bell,
   X,
   Sun,
-  Moon
+  Moon,
+  Lock,
+  LockOpen
 } from 'lucide-react';
 
 import { MOODS } from '../lib/moods';
@@ -50,6 +57,22 @@ import {
 // Avatar de Shadcn
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
+// Sheet (drawer) para menú mobile
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+
+const MOBILE_MENU_LINKS = [
+  { to: '/map', icon: MapPin, label: 'Mapa' },
+  { to: '/events', icon: CalendarSearch, label: 'Eventos' },
+  { to: '/calendar', icon: CalendarIcon, label: 'Calendario' },
+  { to: '/categories', icon: LayoutGrid, label: 'Categorías' },
+  { to: '/about-moods', icon: Sparkles, label: 'Sobre los Moods' },
+];
+
 
 // ============================================================
 // COMPONENTE: Navbar
@@ -63,7 +86,7 @@ export const Navbar: React.FC = () => {
   // Estado del usuario desde el hook
   const { user, profile, isAdmin, logout } = useAuth();
   
-  const { mood: activeMood, setMood: setContextMood, clearMood } = useMood();
+  const { mood: activeMood, setMood: setContextMood, clearMood, frozen, freezeMood, unfreezeMood } = useMood();
   const { dark, toggle: toggleTheme } = useTheme();
   const { notifications, unreadCount, markRead, markAllRead, refresh } = useNotifications();
   const navigate = useNavigate();
@@ -71,6 +94,7 @@ export const Navbar: React.FC = () => {
   // Estados para dialogs de auth
   const [loginOpen, setLoginOpen] = useState(false);
   const [registerOpen, setRegisterOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleMoodSelect = (moodId: string) => {
     if (moodId === activeMood) clearMood();
@@ -128,6 +152,9 @@ export const Navbar: React.FC = () => {
             <Link to="/map" className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-primary transition-colors flex items-center gap-1">
               <MapPin size={16} /> Mapa
             </Link>
+            <Link to="/events" className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-primary transition-colors flex items-center gap-1">
+              <CalendarSearch size={16} /> Eventos
+            </Link>
             <Link to="/calendar" className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-primary transition-colors flex items-center gap-1">
               <CalendarIcon size={16} /> Calendario
             </Link>
@@ -160,11 +187,34 @@ export const Navbar: React.FC = () => {
                   {mood.emoji}
                 </button>
               ))}
+              <span className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1" />
+              <button
+                onClick={frozen ? unfreezeMood : freezeMood}
+                className={cn(
+                  "w-8 h-8 flex items-center justify-center rounded-full transition-all",
+                  frozen
+                    ? "emoji-btn-active shadow-sm scale-110"
+                    : "text-slate-400 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+                )}
+                title={frozen ? 'Color fijo activo - tocar para desbloquear' : 'Fijar color (no cambiar aunque cambie el mood)'}
+              >
+                {frozen ? <LockOpen size={15} /> : <Lock size={15} />}
+              </button>
             </div>
           </div>
 
           {/* Sección derecha: usuario o login */}
           <div className="flex items-center gap-2">
+            {/* Menú mobile (hamburguesa) */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setMobileOpen(true)}
+              className="lg:hidden text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+              aria-label="Abrir menú"
+            >
+              <Menu size={22} />
+            </Button>
             {/* Dark mode toggle */}
             <Button variant="ghost" size="icon" onClick={toggleTheme} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200">
               {dark ? <Sun size={20} /> : <Moon size={20} />}
@@ -280,6 +330,68 @@ export const Navbar: React.FC = () => {
         </div>
       </nav>
 
+      {/* Menú mobile (drawer) */}
+      <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+        <SheetContent side="right" className="w-3/4 sm:max-w-sm">
+          <SheetHeader className="border-b border-slate-100 dark:border-slate-800">
+            <div className="flex items-center gap-2 pb-2">
+              <img src="/icono.webp" alt="MOOD" className="h-8 w-auto rounded-lg object-contain" />
+              <SheetTitle>MOOD</SheetTitle>
+            </div>
+          </SheetHeader>
+
+          <div className="flex flex-col gap-1 px-2 overflow-y-auto">
+            {MOBILE_MENU_LINKS.map((link) => (
+              <button
+                key={link.to}
+                onClick={() => { setMobileOpen(false); navigate(link.to); }}
+                className="flex items-center gap-3 w-full px-3 py-3 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-primary transition-colors rounded-lg text-left"
+              >
+                <link.icon size={18} className="text-primary shrink-0" />
+                {link.label}
+              </button>
+            ))}
+            {user && (
+              <button
+                onClick={() => { setMobileOpen(false); navigate('/submit'); }}
+                className="flex items-center gap-3 w-full px-3 py-3 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-primary transition-colors rounded-lg text-left"
+              >
+                <PlusCircle size={18} className="text-primary shrink-0" />
+                Subir Evento
+              </button>
+            )}
+            {isAdmin && (
+              <button
+                onClick={() => { setMobileOpen(false); navigate('/admin'); }}
+                className="flex items-center gap-3 w-full px-3 py-3 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-primary transition-colors rounded-lg text-left"
+              >
+                <ShieldCheck size={18} className="text-primary shrink-0" />
+                Admin
+              </button>
+            )}
+          </div>
+
+          {user && (
+            <div className="mt-2 border-t border-slate-100 dark:border-slate-800 pt-2 px-2 flex flex-col gap-1">
+              <button
+                onClick={() => { setMobileOpen(false); navigate('/profile'); }}
+                className="flex items-center gap-3 w-full px-3 py-3 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-primary transition-colors rounded-lg text-left"
+              >
+                <UserIcon size={18} className="text-primary shrink-0" />
+                Perfil
+              </button>
+              <button
+                onClick={() => { setMobileOpen(false); navigate('/favorites'); }}
+                className="flex items-center gap-3 w-full px-3 py-3 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-primary transition-colors rounded-lg text-left"
+              >
+                <Heart size={18} className="text-primary shrink-0" />
+                Favoritos
+              </button>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+
       {/* Mood selector (mobile) */}
       <div className="lg:hidden flex items-center justify-center gap-2 pb-3 px-4 border-b border-slate-100 dark:border-slate-800 dark:bg-slate-950">
         {activeMood && (
@@ -306,6 +418,19 @@ export const Navbar: React.FC = () => {
             {mood.emoji}
           </button>
         ))}
+        <span className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1" />
+        <button
+          onClick={frozen ? unfreezeMood : freezeMood}
+          className={cn(
+            "w-9 h-9 flex items-center justify-center rounded-full transition-all",
+            frozen
+              ? "emoji-btn-active shadow-sm scale-110"
+              : "text-slate-400 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+          )}
+          title={frozen ? 'Color fijo activo - tocar para desbloquear' : 'Fijar color (no cambiar aunque cambie el mood)'}
+        >
+          {frozen ? <LockOpen size={16} /> : <Lock size={16} />}
+        </button>
       </div>
 
       {/* Dialogs de autenticación (modals) */}

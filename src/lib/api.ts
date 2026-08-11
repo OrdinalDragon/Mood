@@ -3,7 +3,7 @@
  * Helper para hacer requests al API de FastAPI.
  */
 
-import { Event, UserProfile, UserAdmin, Ad, Ban, Notification } from '../types';
+import { Event, UserProfile, UserAdmin, Ad, Ban, Notification, Review, UserRating } from '../types';
 
 // URL del API desde variables de entorno
 const API_URL = import.meta.env.VITE_API_URL || '/api';
@@ -275,6 +275,49 @@ export async function updateAd(adId: string, data: Partial<Ad>): Promise<{ messa
 // Eliminar anuncio (admin)
 export async function deleteAd(adId: string): Promise<{ message: string }> {
   return apiFetch<{ message: string }>(`/ads/${adId}`, {
+    method: 'DELETE',
+  });
+}
+
+// Crear o actualizar la valoración del usuario sobre un evento
+export async function createReview(eventId: string, rating: number, comment?: string): Promise<Review> {
+  return apiFetch<Review>(`/reviews/${eventId}`, {
+    method: 'POST',
+    body: JSON.stringify({ rating, comment: comment || null }),
+  });
+}
+
+// Listar valoraciones de un evento (público)
+export async function getEventReviews(eventId: string): Promise<Review[]> {
+  return apiFetch<Review[]>(`/reviews/event/${eventId}`);
+}
+
+// Valoraciones del usuario autenticado (con datos del evento)
+export async function getMyReviews(): Promise<Review[]> {
+  return apiFetch<Review[]>('/reviews/mine');
+}
+
+// Valoraciones recibidas en los eventos del usuario (organizador)
+export async function getCreatorReviews(): Promise<Review[]> {
+  return apiFetch<Review[]>('/reviews/creator');
+}
+
+// Puntuación general de un organizador
+export async function getUserRating(userId: string): Promise<UserRating> {
+  return apiFetch<UserRating>(`/reviews/user/${userId}/rating`);
+}
+
+// Responder una valoración (solo organizador del evento o admin)
+export async function replyToReview(reviewId: string, reply: string): Promise<Review> {
+  return apiFetch<Review>(`/reviews/${reviewId}/reply`, {
+    method: 'PATCH',
+    body: JSON.stringify({ reply }),
+  });
+}
+
+// Eliminar una valoración (autor o admin)
+export async function deleteReview(reviewId: string): Promise<void> {
+  await apiFetch<void>(`/reviews/${reviewId}`, {
     method: 'DELETE',
   });
 }

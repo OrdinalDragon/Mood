@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { changePassword, getMyEvents, uploadImage } from '../lib/api';
-import { Event } from '../types';
+import { changePassword, getMyEvents, uploadImage, getUserRating } from '../lib/api';
+import { Event, UserRating } from '../types';
+import { UserReviewsPanel } from '../components/UserReviewsPanel';
+import { StarRatingDisplay } from '../components/StarRating';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Calendar, Mail, Shield, User as UserIcon, Camera, KeyRound, Loader2, MapPin, Clock, X } from 'lucide-react';
+import { Calendar, Mail, Shield, User as UserIcon, Camera, KeyRound, Loader2, MapPin, Clock, X, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -40,6 +42,7 @@ export const ProfilePage: React.FC = () => {
   const { user, updateProfile } = useAuth();
   const [myEvents, setMyEvents] = useState<Event[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
+  const [organizerRating, setOrganizerRating] = useState<UserRating | null>(null);
 
   // Edit profile dialog state
   const [editOpen, setEditOpen] = useState(false);
@@ -75,6 +78,14 @@ export const ProfilePage: React.FC = () => {
     };
     loadMyEvents();
   }, []);
+
+  useEffect(() => {
+    if (user?.uid) {
+      getUserRating(user.uid)
+        .then(setOrganizerRating)
+        .catch(() => setOrganizerRating(null));
+    }
+  }, [user?.uid]);
 
   if (!user) {
     return (
@@ -209,6 +220,25 @@ export const ProfilePage: React.FC = () => {
               </Link>
             </CardContent>
           </Card>
+          <Card>
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className="p-3 bg-primary/15 rounded-lg">
+                <Star className="w-6 h-6 text-primary" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-card-foreground">Valoración como organizador</h3>
+                {organizerRating && organizerRating.rating_count > 0 && organizerRating.avg_rating != null ? (
+                  <div className="flex items-center gap-2 mt-1">
+                    <StarRatingDisplay value={organizerRating.avg_rating} size={14} />
+                    <span className="text-sm font-semibold text-card-foreground">{organizerRating.avg_rating.toFixed(1).replace('.', ',')}</span>
+                    <span className="text-xs text-muted-foreground">· {organizerRating.rating_count} {organizerRating.rating_count === 1 ? 'valoración' : 'valoraciones'}</span>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Tus valoraciones se suman acá</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* My events */}
@@ -268,6 +298,9 @@ export const ProfilePage: React.FC = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Valoraciones y comentarios */}
+        <UserReviewsPanel />
       </div>
 
       {/* Edit profile dialog */}

@@ -4,6 +4,9 @@ interface MoodContextType {
   mood: string | null;
   setMood: (moodId: string) => void;
   clearMood: () => void;
+  frozen: boolean;
+  freezeMood: () => void;
+  unfreezeMood: () => void;
 }
 
 const MoodContext = createContext<MoodContextType | undefined>(undefined);
@@ -33,9 +36,27 @@ export function MoodProvider({ children }: { children: React.ReactNode }) {
     }
   });
 
+  const [frozen, setFrozen] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('mood_frozen') === '1';
+    } catch {
+      return false;
+    }
+  });
+
+  const [frozenMood, setFrozenMood] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem('frozen_mood');
+    } catch {
+      return null;
+    }
+  });
+
+  const themeMood = frozen ? frozenMood : mood;
+
   useEffect(() => {
-    applyTheme(mood);
-  }, [mood]);
+    applyTheme(themeMood);
+  }, [themeMood]);
 
   const setMood = useCallback((moodId: string) => {
     setMoodState(moodId);
@@ -51,8 +72,25 @@ export function MoodProvider({ children }: { children: React.ReactNode }) {
     } catch {}
   }, []);
 
+  const freezeMood = useCallback(() => {
+    setFrozenMood(mood);
+    setFrozen(true);
+    try {
+      localStorage.setItem('mood_frozen', '1');
+      if (mood) localStorage.setItem('frozen_mood', mood);
+      else localStorage.removeItem('frozen_mood');
+    } catch {}
+  }, [mood]);
+
+  const unfreezeMood = useCallback(() => {
+    setFrozen(false);
+    try {
+      localStorage.removeItem('mood_frozen');
+    } catch {}
+  }, []);
+
   return (
-    <MoodContext.Provider value={{ mood, setMood, clearMood }}>
+    <MoodContext.Provider value={{ mood, setMood, clearMood, frozen, freezeMood, unfreezeMood }}>
       {children}
     </MoodContext.Provider>
   );
