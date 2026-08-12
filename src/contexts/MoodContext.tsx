@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { trackMoodSelection } from '../lib/analytics';
 
 interface MoodContextType {
   mood: string | null;
@@ -63,6 +64,7 @@ export function MoodProvider({ children }: { children: React.ReactNode }) {
     try {
       localStorage.setItem('mood', moodId);
     } catch {}
+    trackMoodSelection(moodId);
   }, []);
 
   const clearMood = useCallback(() => {

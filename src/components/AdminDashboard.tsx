@@ -30,7 +30,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 
 // Iconos
-import { Check, X, Trash2, ExternalLink, Pencil, MapPin, Upload, ImagePlus, Users, Calendar, Megaphone, Plus, Hammer, Ban as BanIcon, ShieldOff, Hand } from 'lucide-react';
+import { Check, X, Trash2, ExternalLink, Pencil, MapPin, Upload, ImagePlus, Users, Calendar, Megaphone, Plus, Hammer, Ban as BanIcon, ShieldOff, Hand, BarChart3 } from 'lucide-react';
+
+// Estadísticas
+import StatsTab from './StatsTab';
 
 // Utils
 import { format } from 'date-fns';
@@ -72,7 +75,7 @@ const ROLE_COLORS: Record<string, string> = {
 
 export const AdminDashboard: React.FC = () => {
   // ---- ESTADOS ----
-  const [tab, setTab] = useState<'events' | 'users' | 'bans' | 'ads' | 'claims'>('events');
+  const [tab, setTab] = useState<'events' | 'users' | 'bans' | 'ads' | 'claims' | 'stats'>('events');
 
   // Eventos
   const [pendingEvents, setPendingEvents] = useState<Event[]>([]);
@@ -525,6 +528,17 @@ export const AdminDashboard: React.FC = () => {
             <Badge className="ml-1 bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-300 text-xs px-1.5 py-0">{bans.length}</Badge>
           )}
         </button>
+        <button
+          onClick={() => setTab('stats')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${
+            tab === 'stats'
+              ? 'bg-primary/10 text-primary border-b-2 border-primary'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+          }`}
+        >
+          <BarChart3 size={16} />
+          Estadísticas
+        </button>
       </div>
 
       {/* ---- TAB: EVENTOS ---- */}
@@ -954,6 +968,11 @@ export const AdminDashboard: React.FC = () => {
           </div>
         )}
         </>
+      )}
+
+      {/* ---- TAB: ESTADÍSTICAS ---- */}
+      {tab === 'stats' && (
+        <StatsTab />
       )}
 
       {/* MODAL DE EDICIÓN */}

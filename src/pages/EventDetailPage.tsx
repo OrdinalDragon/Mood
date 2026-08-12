@@ -6,6 +6,7 @@ import { EventReviews } from '../components/EventReviews';
 import { StarRatingDisplay } from '../components/StarRating';
 import { UserRating } from '../types';
 import { categoryLabels, sampleEvents } from '../lib/sampleEvents';
+import { trackEventView, trackFavorite } from '../lib/analytics';
 import { useAuth } from '../hooks/useAuth';
 import { toLocalDatetimeString } from '../lib/utils';
 import { Button } from '@/components/ui/button';
@@ -142,6 +143,10 @@ const [claiming, setClaiming] = useState(false);
   }, [id]);
 
   useEffect(() => {
+    if (id) trackEventView(id);
+  }, [id]);
+
+  useEffect(() => {
     if (id) {
       const stored = localStorage.getItem(`event_attendees_${id}`);
       const attendeesList = stored ? JSON.parse(stored) : [];
@@ -197,6 +202,7 @@ const [claiming, setClaiming] = useState(false);
       } else {
         await addFavorite(id);
         setIsFavorite(true);
+        trackFavorite(id);
       }
     } catch (err) {
       console.error('Error toggling favorite:', err);

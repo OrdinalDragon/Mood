@@ -7,6 +7,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Review } from '../types';
 import { createReview, deleteReview, getEventReviews, replyToReview } from '../lib/api';
+import { trackReview } from '../lib/analytics';
 import { useAuth } from '../hooks/useAuth';
 import { StarRatingDisplay, StarRatingInput } from './StarRating';
 import { Card, CardContent } from '@/components/ui/card';
@@ -73,6 +74,7 @@ export const EventReviews: React.FC<EventReviewsProps> = ({ eventId, canReply })
       await createReview(eventId, rating, comment.trim() || undefined);
       toast.success(editing ? 'Valoración actualizada' : '¡Gracias por tu valoración!');
       setEditing(false);
+      trackReview(eventId);
       await loadReviews();
     } catch (err: any) {
       toast.error(err?.message || 'Error al guardar la valoración');

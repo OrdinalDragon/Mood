@@ -1,144 +1,210 @@
-from fastapi import APIRouter, Request, HTTPException, Depends
-from datetime import datetime, timedelta
-from typing import List, Optional
+# ============================================================
+# app/routes/analytics.py - Estadísticas de uso (track + summary admin)
+# ============================================================
 import hashlib
-import json
-from beanie import PydanticObjectId
-from app.models import AnalyticsEvent, User
-from app.database import client
-from fastapi.responses import JSONResponse
+import uuid
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional, Any
+
+from fastapi import APIRouter, Depends, HTTPException
+from starlette.requests import Request
+
+from app.models import AnalyticsEvent, Event, User, Review
+from app.routes.auth import get_current_user
 
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
 
-# Configuration
-SALT = "mood_secret_salt_2024"  # Should ideally be in env
-WHITELISTED_TYPES = ["page_view", "mood_select", "search", "event_view", "favorite", "review"]
+IP_SALT = "mood_analytics_salt_v1"
+WHITELISTED_TYPES = [
+    "page_view", "mood_select", "search", "event_view", "favorite", "review", "consent"
+]
 
-async def get_current_admin(request: Request):
-    user = await User.find_one(User.uid == request.state.user.uid)
-    if not user or user.role != "admin":
-        raise HTTPException(status_code=403, detail="Not authorized")
-    return user
+WEEKDAY_NAMES = [
+    "lunes", "martes", "miércoles", "jueves",
+    "viernes", "sábado", "domingo",
+]
+
+
+# ─── POST /analytics/track — Fire-and-forget (público) ──────────────
 
 @router.post("/track")
 async def track_event(request: Request):
+    """Registro anónimo de telemetría. No requiere autenticación.
+
+    Sin consentimiento el frontend no envía nada, así que acá llegan
+    únicamente eventos de usuarios que aceptaron cookies.
+    """
     try:
         data = await request.json()
-        event_type = data.get("type")
-        
-        if event_type not in WHITELISTED_TYPES:
-            return JSONResponse(content={"status": "ignored"}, status_code=200)
+    except Exception:
+        return {"status": "ignored"}
 
-        # IP Handling
-        x_forwarded_for = request.headers.get("X-Forwarded-For")
-        ip = x_forwarded_for.split(",")[0] if x_forwarded_for else request.client.host
-        
-        # Hash IP
-        ip_hash = hashlib.sha256((ip + SALT).encode()).hexdigest()
+    event_type = data.get("type")
+    if event_type not in WHITELISTED_TYPES:
+        return {"status": "ignored"}
 
-        new_event = AnalyticsEvent(
-            type=event_type,
-            path=request.url.path,
-            mood=data.get("mood"),
-            user_id=data.get("user_id"),
-            client_id=data.get("client_id"),
-            ip_hash=ip_hash,
-            referrer=request.headers.get("Referer"),
-            user_agent=request.headers.get("User-Agent"),
-            created_at=datetime.utcnow()
-        )
-        await new_event.insert()
-        return JSONResponse(content={"status": "ok"}, status_code=201)
-    except Exception as e:
-        return JSONResponse(content={"error": str(e)}, status_code=500)
+    x_forwarded_for = request.headers.get("X-Forwarded-For", "")
+    client_ip = x_forwarded_for.split(",")[0].strip() if x_forwarded_for else "unknown"
+    ip_hash = hashlib.sha256((client_ip + IP_SALT).encode()).hexdigest()
+
+    analytics_event = AnalyticsEvent(
+        id=str(uuid.uuid4()),
+        type=event_type,
+        path=data.get("path"),
+        mood=data.get("mood"),
+        user_id=data.get("user_id") or None,
+        client_id=data.get("client_id") or None,
+        ip_hash=ip_hash,
+        referrer=data.get("referrer") or None,
+        user_agent=data.get("user_agent") or None,
+        created_at=datetime.utcnow(),
+    )
+
+    try:
+        await analytics_event.insert()
+    except Exception:
+        # Fire-and-forget: nunca romper la UX por un evento de telemetría.
+        pass
+
+    return {"status": "ok"}
+
+
+# ─── GET /analytics/summary — Solo admin ─────────────────────────────
 
 @router.get("/summary")
-async def get_summary(days: int = 30, user: User = Depends(get_current_admin)):
+async def get_analytics_summary(
+    days: int = 7,
+    current_user: User = Depends(get_current_user),
+):
+    """Resumen estadístico para el dashboard de admin."""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Solo admins pueden ver estadísticas")
+
     now = datetime.utcnow()
-    start_date = now - timedelta(days=days)
-    
-    # Fetch all events for the period
+    start = now - timedelta(days=days)
+    days = max(1, min(days, 90))
+
+    # ── Tráfico ────────────────────────────────────────────────────────
     events = await AnalyticsEvent.find(
-        AnalyticsEvent.created_at >= start_date
+        AnalyticsEvent.created_at >= start
     ).to_list()
 
-    # Complex Aggregations
-    summary = {
-        "traffic": {
-            "views_by_day": {},
-            "unique_clients_by_day": {},
-            "hourly_picos": {},
-            "weekday_stats": {},
-            "top_pages": {},
-            "mobile_vs_desktop": {"mobile": 0, "desktop": 0}
-        },
-        "moods": {},
-        "events": {
-            "by_status": {},
-            "by_category": {},
-            "by_province": {},
-            "by_mood": {},
-            "next_7d": [],
-            "next_30d": [],
-            "top_favorites": [],
-            "top_rated": []
-        },
-        "users": {
-            "total": 0,
-            "new_this_month": 0,
-            "by_provider": {}
-        },
-        "engagement": {
-            "reviews": 0,
-            "favorites": 0,
-            "claims": 0
-        }
+    unique_clients = set()
+    unique_ips = set()
+    daily_views_by_hour: Dict[int, int] = {h: 0 for h in range(24)}
+    weekday_distribution: Dict[str, int] = {w: 0 for w in WEEKDAY_NAMES}
+    top_pages: Dict[str, int] = {}
+    moods_counts: Dict[str, int] = {}
+
+    for e in events:
+        if e.client_id:
+            unique_clients.add(e.client_id)
+        if e.ip_hash:
+            unique_ips.add(e.ip_hash)
+
+        daily_views_by_hour[e.created_at.hour] = daily_views_by_hour.get(e.created_at.hour, 0) + 1
+        wd = WEEKDAY_NAMES[e.created_at.weekday()]
+        weekday_distribution[wd] = weekday_distribution.get(wd, 0) + 1
+
+        if e.path:
+            top_pages[e.path] = top_pages.get(e.path, 0) + 1
+        if e.mood:
+            moods_counts[e.mood] = moods_counts.get(e.mood, 0) + 1
+
+    top_pages_list = [
+        {"page": path, "views": count}
+        for path, count in sorted(top_pages.items(), key=lambda x: -x[1])[:20]
+    ]
+
+    # ── Eventos ────────────────────────────────────────────────────────
+    all_events = await Event.find({}).to_list()
+    events_by_status: Dict[str, int] = {}
+    events_by_category: Dict[str, int] = {}
+    upcoming_events: List[Dict[str, Any]] = []
+    claims_count = 0
+
+    for evt in all_events:
+        status = evt.status or "unknown"
+        events_by_status[status] = events_by_status.get(status, 0) + 1
+
+        cats = evt.category or evt.categories or []
+        if isinstance(cats, str):
+            cats = [cats]
+        for c in cats:
+            if c:
+                events_by_category[c] = events_by_category.get(c, 0) + 1
+
+        if evt.claim_requested_by or evt.claim_requested_at:
+            claims_count += 1
+
+        if evt.date and now < evt.date <= now + timedelta(days=days):
+            upcoming_events.append({
+                "id": evt.id,
+                "title": evt.title,
+                "date": evt.date.isoformat(),
+                "location": evt.location or {},
+                "category": cats,
+                "moods": evt.moods or [],
+                "is_free": evt.is_free,
+            })
+
+    upcoming_events.sort(key=lambda x: x["date"])
+    upcoming_events = upcoming_events[:50]
+
+    # ── Top favoritos y valorados ──────────────────────────────────────
+    fav_by_event: Dict[str, int] = {}
+    for u in await User.find({}).to_list():
+        for fav_id in (u.favorites or []):
+            fav_by_event[fav_id] = fav_by_event.get(fav_id, 0) + 1
+
+    title_by_id = {e.id: e.title for e in all_events}
+    top_favorites = {
+        title_by_id.get(eid, eid): count
+        for eid, count in sorted(fav_by_event.items(), key=lambda x: -x[1])[:10]
     }
 
-    for e in events:
-        # Traffic
-        dt = e.created_at
-        day_str = dt.strftime("%Y-%m-%d")
-        hour_str = dt.strftime("%H")
-        weekday_str = dt.strftime("%A")
-        
-        summary["traffic"]["views_by_day"][day_str] = summary["traffic"]["views_by_day"].get(day_str, 0) + 1
-        
-        if e.client_id:
-            summary["traffic"]["unique_clients_by_day"][day_str] = summary["traffic"]["unique_clients_by_day"].get(day_str, 0) + 1
-            
-        summary["traffic"]["hourly_picos"][hour_str] = summary["traffic"]["hourly_picos"].get(hour_str, 0) + 1
-        summary["traffic"]["weekday_stats"][weekday_str] = summary["traffic"]["weekday_stats"].get(weekday_str, 0) + 1
-        
-        if e.path:
-            summary["traffic"]["top_pages"][e.path] = summary["traffic"]["top_pages"].get(e.path, 0) + 1
-            
-        if "Mobile" in e.user_agent:
-            summary["traffic"]["mobile_vs_desktop"]["mobile"] += 1
-        else:
-            summary["traffic"]["mobile_vs_desktop"]["desktop"] += 1
+    rating_count: Dict[str, int] = {}
+    for r in await Review.find({}).to_list():
+        rating_count[r.event_id] = rating_count.get(r.event_id, 0) + 1
 
-        # Moods
-        if e.mood:
-            summary["moods"][e.mood] = summary["moods"].get(e.mood, 0) + 1
+    top_rated = {
+        title_by_id.get(eid, eid): count
+        for eid, count in sorted(rating_count.items(), key=lambda x: -x[1])[:10]
+    }
 
-        # Events (Simplified for now, will refine based on actual data models)
-        if e.type == "event_view":
-            summary["events"]["by_status"][e.mood] = summary["events"]["by_status"].get(e.mood, 0) + 1 # Using mood as dummy for status if needed
-            
-        # Engagement
-        if e.type == "review":
-            summary["engagement"]["reviews"] += 1
-        elif e.type == "favorite":
-            summary["engagement"]["favorites"] += 1
-        elif e.type == "claim": # Check if 'claim' is a valid type
-            summary["engagement"]["claims"] += 1
+    # ── Usuarios ───────────────────────────────────────────────────────
+    users_docs = await User.find({}).to_list()
+    users_total = len(users_docs)
+    users_new_per_month = sum(
+        1 for u in users_docs if u.created_at and u.created_at >= now - timedelta(days=30)
+    )
+    providers: Dict[str, int] = {}
+    for u in users_docs:
+        prov = u.auth_provider or "email"
+        providers[prov] = providers.get(prov, 0) + 1
 
-    # Users
-    unique_users = set()
-    for e in events:
-        if e.user_id:
-            unique_users.add(e.user_id)
-    summary["users"]["total"] = len(unique_users)
+    # ── Engagement ─────────────────────────────────────────────────────
+    reviews_count = len(rating_count)
+    favorites_count = sum(len(u.favorites or []) for u in users_docs)
 
-    return summary
+    return {
+        "period_days": days,
+        "traffic_views": len(events),
+        "unique_clients": len(unique_clients),
+        "unique_ips": len(unique_ips),
+        "daily_views_by_hour": {str(k): v for k, v in daily_views_by_hour.items()},
+        "weekday_distribution": weekday_distribution,
+        "top_pages": top_pages_list,
+        "moods_counts": moods_counts,
+        "events_by_status": events_by_status,
+        "events_by_category": events_by_category,
+        "upcoming_events": upcoming_events,
+        "top_favorites": top_favorites,
+        "top_rated": top_rated,
+        "users_total": users_total,
+        "users_new_per_month": users_new_per_month,
+        "providers": providers,
+        "engagement_reviews_count": reviews_count,
+        "engagement_favorites_count": favorites_count,
+        "engagement_claims_count": claims_count,
+    }
