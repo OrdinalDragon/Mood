@@ -25,8 +25,13 @@ const parseDate = (date: any): Date | null => {
   if (date.toDate && typeof date.toDate === 'function') return date.toDate();
   if (date.seconds && date.nanoseconds) return new Date(date.seconds * 1000);
   if (typeof date === 'string') {
-    const s = date.replace(/Z$/i, '').replace(/\.\d{3}Z?$/i, '');
-    return new Date(s);
+    const s = date.trim();
+    if (/[zZ]$|[+-]\d{2}:?\d{2}$/.test(s)) {
+      const d = new Date(s);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    const d = new Date(s.replace(/\.\d{1,3}$/, '') + '-03:00');
+    return isNaN(d.getTime()) ? null : d;
   }
   const parsed = new Date(date);
   return isNaN(parsed.getTime()) ? null : parsed;

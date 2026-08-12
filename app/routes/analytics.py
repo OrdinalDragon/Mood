@@ -3,7 +3,7 @@
 # ============================================================
 import hashlib
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -15,6 +15,8 @@ from app.routes.auth import get_current_user
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
 
 IP_SALT = "mood_analytics_salt_v1"
+# Argentina (UTC-3, sin DST desde 2009). Los eventos se guardan en UTC naive.
+ARG_TZ = timezone(timedelta(hours=-3))
 WHITELISTED_TYPES = [
     "page_view", "mood_select", "search", "event_view", "favorite", "review", "consent"
 ]
@@ -102,8 +104,10 @@ async def get_analytics_summary(
         if e.ip_hash:
             unique_ips.add(e.ip_hash)
 
-        daily_views_by_hour[e.created_at.hour] = daily_views_by_hour.get(e.created_at.hour, 0) + 1
-        wd = WEEKDAY_NAMES[e.created_at.weekday()]
+        # created_at se guarda como UTC naive → se pasa a hora de Argentina para los gráficos
+        local_dt = e.created_at.replace(tzinfo=timezone.utc).astimezone(ARG_TZ)
+        daily_views_by_hour[local_dt.hour] = daily_views_by_hour.get(local_dt.hour, 0) + 1
+        wd = WEEKDAY_NAMES[local_dt.weekday()]
         weekday_distribution[wd] = weekday_distribution.get(wd, 0) + 1
 
         if e.path:

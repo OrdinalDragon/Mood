@@ -11,7 +11,7 @@ function adToProps(ad: Ad) {
     title: ad.title,
     subtitle: ad.subtitle || undefined,
     description: ad.description || undefined,
-    date: ad.date ? (() => { const s = ad.date.replace(/Z$/i, '').replace(/\.\d{3}Z?$/i, ''); return new Date(s); })() : undefined,
+    date: ad.date ? new Date(ad.date) : undefined,
     location: ad.location || undefined,
     ctaText: ad.cta_text || 'Ver más',
     ctaLink: ad.cta_link || undefined,

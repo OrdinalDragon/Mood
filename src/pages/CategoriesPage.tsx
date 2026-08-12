@@ -39,8 +39,8 @@ export const CategoriesPage = () => {
             emoji: m.emoji,
             label: m.label,
             events: (moodMap[m.id] || []).sort((a: any, b: any) => {
-              const ta = a.date?.toDate ? a.date.toDate().getTime() : new Date(String(a.date).replace(/Z$/, '')).getTime();
-              const tb = b.date?.toDate ? b.date.toDate().getTime() : new Date(String(b.date).replace(/Z$/, '')).getTime();
+              const ta = a.date?.toDate ? a.date.toDate().getTime() : new Date(String(a.date)).getTime();
+              const tb = b.date?.toDate ? b.date.toDate().getTime() : new Date(String(b.date)).getTime();
               const now = Date.now();
               const aUpcoming = ta >= now ? 0 : 1;
               const bUpcoming = tb >= now ? 0 : 1;

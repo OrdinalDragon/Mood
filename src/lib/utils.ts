@@ -30,15 +30,22 @@ export function cn(...inputs: ClassValue[]) {
 
 /**
  * parseEventDate - Convierte fecha de evento a Date
- * Maneja tanto Firebase Timestamp como string ISO
+ * Maneja tanto Firebase Timestamp como string ISO.
+ * - Strings con zona horaria ("Z" u offset) → instante absoluto.
+ * - Strings sin zona (eventos del scraper) → se asumen en hora de Argentina (UTC-3).
  */
 export function parseEventDate(date: any): Date | null {
   if (!date) return null;
   if (date instanceof Date) return date;
   if (date?.toDate && typeof date.toDate === 'function') return date.toDate();
   if (typeof date === 'string') {
-    const s = date.replace(/Z$/i, '').replace(/\.\d{3}Z?$/i, '');
-    return new Date(s);
+    const s = date.trim();
+    if (/[zZ]$|[+-]\d{2}:?\d{2}$/.test(s)) {
+      const d = new Date(s);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    const d = new Date(s.replace(/\.\d{1,3}$/, '') + '-03:00');
+    return isNaN(d.getTime()) ? null : d;
   }
   return null;
 }
