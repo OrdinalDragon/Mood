@@ -1,9 +1,10 @@
 # ============================================================
-# app/models.py - Modelos MongoDB (Beanie ODM)
+# app/models.py - Modelos MongoDB (Beanie ODM) + analytics event
 # ============================================================
-from beanie import Document
 from datetime import datetime
 from typing import Optional
+
+from beanie import Document
 
 
 class Event(Document):
@@ -124,3 +125,29 @@ class Notification(Document):
 
     class Settings:
         name = "notifications"
+
+
+class AnalyticsEvent(Document):
+    """Evento de telemetría anónimo para estadísticas de uso.
+
+    La IP solo se guarda como hash (ip_hash) para contar visitantes únicos.
+    client_id es un UUID generado en el navegador tras aceptar cookies.
+    """
+    id: str
+    type: str  # page_view, mood_select, search, event_view, favorite, review, consent
+    path: Optional[str] = None
+    mood: Optional[str] = None
+    user_id: Optional[str] = None
+    client_id: Optional[str] = None
+    ip_hash: Optional[str] = None
+    referrer: Optional[str] = None
+    user_agent: Optional[str] = None
+    created_at: datetime
+
+    class Settings:
+        name = "analytics_events"
+        indexes = ["created_at"]  # Índice para consultas por período
+
+
+# ─── Importar en database.py para que se registre ──────────────────
+from .models import Event, User, BannedEmail, Ad, Review, Notification, AnalyticsEvent

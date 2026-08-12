@@ -16,8 +16,8 @@ client: Optional[AsyncIOMotorClient] = None
 async def init_db():
     global client
     client = AsyncIOMotorClient(MONGO_URI)
-    from app.models import Event, User, Ad, BannedEmail, Notification, Review
-    await init_beanie(database=client[MONGO_DB_NAME], document_models=[Event, User, Ad, BannedEmail, Notification, Review])
+    from app.models import Event, User, Ad, BannedEmail, Notification, Review, AnalyticsEvent
+    await init_beanie(database=client[MONGO_DB_NAME], document_models=[Event, User, Ad, BannedEmail, Notification, Review, AnalyticsEvent])
 
 
 async def close_db():
