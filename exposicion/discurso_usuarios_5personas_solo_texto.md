@@ -4,7 +4,7 @@
 
 ---
 
-## PERSONA A
+## Inicio Gaston
 
 Buenas a todos, soy ___ y junto con mi grupo hoy venimos a presentarles **MOOD**: una web que te dice qué hacer en tu ciudad según cómo te sentís.
 
@@ -18,7 +18,7 @@ Ahora se los mostramos en vivo. La pantalla es nuestra y el micro pasa a ___.
 
 ---
 
-## PERSONA B
+## Pagina en vivo Mariano
 
 Acá la tienen, en vivo. Lo primero que te pregunta la app es simple: **¿cómo te sentís hoy?**
 
@@ -34,7 +34,7 @@ En poco más de un minuto armaste tu plan. Eso es MOOD. Les devuelvo el micro a 
 
 ---
 
-## PERSONA C
+## Nico
 
 Y acá está lo que nos diferencia: MOOD no es una vidriera de eventos que vienen de afuera, es una **plataforma de la comunidad**.
 
@@ -46,7 +46,7 @@ Les dejo el micro con ___, que les muestra lo que hay detrás de la experiencia.
 
 ---
 
-## PERSONA D
+## PERSONA D de diego
 
 Gracias ___. Dos cosas más que hacen la experiencia completa.
 
@@ -56,7 +56,7 @@ Segundo, las **notificaciones**. MOOD no te bombardea: cuando uno de tus eventos
 
 ---
 
-## PERSONA E
+## May MVP
 
 En resumen, por qué MOOD:
 
