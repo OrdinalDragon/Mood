@@ -292,6 +292,15 @@ async def notify_claim_decision(event: Event, claimant_uid: str, approved: bool)
     )
 
 
+async def cleanup_claim_request_notifications(event_id: str):
+    """Borra los avisos de 'reclamo de evento' pendiente para todos los
+    admins/moderadores cuando el reclamo ya se resolvió (aprobado o rechazado)."""
+    await Notification.find(
+        Notification.type == "event_claim_requested",
+        Notification.event_id == event_id,
+    ).delete_many()
+
+
 # ============================================================
 # CLEANUP - un evento fue eliminado
 # ============================================================

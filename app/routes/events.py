@@ -15,6 +15,7 @@ from app.notifications_service import (
     notify_event_status,
     notify_admins_claim_request,
     notify_claim_decision,
+    cleanup_claim_request_notifications,
     cleanup_favorite_near_for_event,
 )
 from datetime import datetime, timedelta, timezone
@@ -366,6 +367,7 @@ async def approve_claim(event_id: str, current_user: User = Depends(get_current_
     event.claim_requested_by = None
     event.claim_requested_at = None
     await event.save()
+    await cleanup_claim_request_notifications(event.id)
     await notify_claim_decision(event, claimant_uid, True)
     data = event.model_dump(by_alias=False)
     mood_uid = await get_mood_uid()
@@ -387,6 +389,7 @@ async def reject_claim(event_id: str, current_user: User = Depends(get_current_u
     event.claim_requested_by = None
     event.claim_requested_at = None
     await event.save()
+    await cleanup_claim_request_notifications(event.id)
     await notify_claim_decision(event, claimant_uid, False)
     data = event.model_dump(by_alias=False)
     mood_uid = await get_mood_uid()
