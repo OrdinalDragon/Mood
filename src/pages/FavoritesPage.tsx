@@ -6,6 +6,7 @@ import { EventCard } from '@/components/EventCard';
 import { Button } from '@/components/ui/button';
 import { Heart, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { sampleEvents } from '../lib/sampleEvents';
 
 export const FavoritesPage: React.FC = () => {
   const { user } = useAuth();
@@ -15,7 +16,12 @@ export const FavoritesPage: React.FC = () => {
   const loadFavorites = async () => {
     try {
       const data = await getFavorites();
-      setEvents(data);
+      const ids = data.map(e => e.id);
+      // Favoritos de eventos de ejemplo (no existen en la DB): se buscan en el sample.
+      const sampleFavs = (sampleEvents as Partial<Event>[])
+        .filter(e => e.id && (user?.favorites || []).includes(e.id) && !ids.includes(e.id))
+        .map(e => ({ ...e, date: e.date || e.date?.toDate?.() || new Date() }) as Event);
+      setEvents([...data, ...sampleFavs]);
     } catch (err) {
       console.error('Error loading favorites:', err);
       setEvents([]);

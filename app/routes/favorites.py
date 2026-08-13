@@ -35,9 +35,8 @@ async def list_favorites(current_user: User = Depends(get_current_user)):
 
 @router.post("/{event_id}")
 async def add_favorite(event_id: str, current_user: User = Depends(get_current_user)):
-    event = await Event.find_one(Event.id == event_id)
-    if not event:
-        raise HTTPException(status_code=404, detail="Event not found")
+    # No exigimos que el evento exista en la DB: los eventos de ejemplo
+    # (ids tipo "sample-*") también se pueden guardar en favoritos.
     user = await User.find_one(User.uid == current_user.uid)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
