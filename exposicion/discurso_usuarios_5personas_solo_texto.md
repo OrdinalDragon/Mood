@@ -6,7 +6,7 @@
 
 ## Inicio Gaston
 
-Buenas a todos, soy ___ y junto con mi grupo hoy venimos a presentarles **MOOD**: una web que te dice qué hacer en tu ciudad según cómo te sentís.
+Buenas a todos, soy Gaston y junto con mi grupo hoy venimos a presentarles **MOOD**: una web que te dice qué hacer en tu ciudad según cómo te sentís.
 
 Antes de arrancar, una pregunta: ¿cuántas veces buscaste "qué hacer hoy" y terminaste saltando entre Instagram, Google y mil pestañas abiertas, sin encontrar nada que realmente te cierre? Eso es exactamente lo que venimos a resolver.
 
@@ -30,7 +30,7 @@ Toco un evento y acá está todo: la descripción, la **ubicación con cómo lle
 
 Guardo el evento y desde ese momento la app me va a **avisar cuando se acerque la fecha**: hoy, mañana o faltan X días. No tengo que estar pendiente de nada.
 
-En poco más de un minuto armaste tu plan. Eso es MOOD. Les devuelvo el micro a ___.
+En poco más de un minuto armaste tu plan. Eso es MOOD. Le paso la palabra a mi compañero Nicolas.
 
 ---
 
@@ -42,13 +42,13 @@ Primero, vos no sos un espectador. Si organizás algo, sea un recital, un mercad
 
 Segundo, la confianza se construye con valoraciones. Cada evento se puede puntuar de 1 a 10 con estrellas y dejar un comentario. Y lo mejor: el organizador puede responderte. No es un muro anónimo, es un ida y vuelta real entre quien organiza y quien participa, y eso hace que lo que ves sea confiable.
 
-Les dejo el micro con ___, que les muestra lo que hay detrás de la experiencia.
+Les dejo con Diego, que les muestra lo que hay detrás de la experiencia.
 
 ---
 
 ## PERSONA D de diego
 
-Gracias ___. Dos cosas más que hacen la experiencia completa.
+Gracias Nico. Dos cosas más que hacen la experiencia completa.
 
 Primero, el **asistente inteligente**. No tenés que navegar ni filtrar: le preguntás "quiero hacer algo tranquilo" y él te recomienda opciones, con la distancia desde donde estás. Es como preguntarle a alguien que ya conoce la ciudad.
 
