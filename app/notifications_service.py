@@ -14,6 +14,9 @@ logger = logging.getLogger(__name__)
 FAVORITE_WINDOW_DAYS = 7
 FAVORITE_AGGREGATE_THRESHOLD = 10
 EMAIL_REMINDERS_ENABLED = os.getenv("SEND_EMAIL_REMINDERS", "1").lower() in ("1", "true", "yes")
+# Período de gracia antes de mandar el mail de un favorito: si el usuario lo
+# agrega por error y lo saca dentro de este tiempo, el mail nunca se envía.
+EMAIL_FAVORITE_GRACE_MINUTES = int(os.getenv("EMAIL_FAVORITE_GRACE_MINUTES", "5"))
 
 ADMIN_ROLES = ("admin", "moderator")
 
@@ -35,6 +38,7 @@ async def create_notification(
     event_id: str = None,
     event_date: datetime = None,
     event_count: int = None,
+    email_due_at: datetime = None,
 ):
     return await Notification(
         id=str(uuid.uuid4()),
@@ -48,6 +52,7 @@ async def create_notification(
         event_count=event_count,
         read=False,
         created_at=datetime.utcnow(),
+        email_due_at=email_due_at,
     ).create()
 
 
@@ -196,6 +201,21 @@ async def sync_favorite_near(user: User):
                 existing_agg.message = message
                 existing_agg.event_count = len(near_events)
                 existing_agg.read = False
+                # El mail de resumen se reprograma con la nueva gracia
+                existing_agg.email_sent_at = None
+                existing_agg.email_due_at = arg_now() + timedelta(
+                    minutes=EMAIL_FAVORITE_GRACE_MINUTES
+                )
+                await existing_agg.save()
+            if (
+                existing_agg.email_sent_at is None
+                and existing_agg.email_due_at is not None
+                and existing_agg.email_due_at <= arg_now()
+                and EMAIL_REMINDERS_ENABLED
+                and user.email_notifications
+            ):
+                await send_summary_email_safe(user, len(near_events))
+                existing_agg.email_sent_at = datetime.utcnow()
                 await existing_agg.save()
         else:
             await create_notification(
@@ -205,9 +225,8 @@ async def sync_favorite_near(user: User):
                 message,
                 link="/favorites",
                 event_count=len(near_events),
+                email_due_at=arg_now() + timedelta(minutes=EMAIL_FAVORITE_GRACE_MINUTES),
             )
-            if EMAIL_REMINDERS_ENABLED and user.email_notifications:
-                await send_summary_email_safe(user, len(near_events))
         return
 
     # Eliminar agregada si existía
@@ -229,9 +248,48 @@ async def sync_favorite_near(user: User):
                 link=f"/event/{e.id}",
                 event_id=e.id,
                 event_date=e.date,
+                email_due_at=now + timedelta(minutes=EMAIL_FAVORITE_GRACE_MINUTES),
             )
-            if EMAIL_REMINDERS_ENABLED and user.email_notifications:
+        else:
+            n = existing_events[e.id]
+            # El mail se envía solo cuando venció el período de gracia, así un
+            # tap accidental se puede deshacer antes sin recibir el correo.
+            if (
+                n.email_sent_at is None
+                and n.email_due_at is not None
+                and n.email_due_at <= now
+                and EMAIL_REMINDERS_ENABLED
+                and user.email_notifications
+            ):
                 await send_reminder_email_safe(user, e, countdown_text(e.date, now))
+                n.email_sent_at = datetime.utcnow()
+                await n.save()
+
+
+# ============================================================
+# MAILS VENCIDOS - favoritos cuya gracia ya pasó
+# ============================================================
+async def send_due_favorite_emails():
+    """Envía los mails de recordatorio de favoritos cuyo período de gracia ya
+    venció. Corre cada ~1 minuto desde el scheduler. Re-ejecuta
+    sync_favorite_near por usuario afectado, que es quien decide el envío y lo
+    marca como enviado (email_sent_at)."""
+    due = await Notification.find(
+        {
+            "type": "favorite_near",
+            "email_sent_at": None,
+            "email_due_at": {"$ne": None, "$lte": datetime.utcnow()},
+        }
+    ).to_list()
+    user_ids = {n.user_id for n in due}
+    for uid in user_ids:
+        user = await User.find_one(User.uid == uid)
+        if not user:
+            continue
+        try:
+            await sync_favorite_near(user)
+        except Exception as e:
+            logger.error(f"send_due_favorite_emails error for user {uid}: {e}")
 
 
 # ============================================================

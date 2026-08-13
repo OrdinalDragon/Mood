@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 SCAN_INTERVAL_SECONDS = 60 * 60  # 1 hora
 SCRAPE_INTERVAL_SECONDS = 6 * 60 * 60  # 6 horas
+EMAIL_FLUSH_SECONDS = 60  # mails de favoritos vencidos (gracia)
 
 
 async def scrape_events_once():
@@ -49,3 +50,16 @@ async def notification_scan_loop():
         except Exception as e:
             logger.error(f"notification scan loop error: {e}")
         await asyncio.sleep(SCAN_INTERVAL_SECONDS)
+
+
+async def favorite_email_flush_loop():
+    """Chequea cada minuto los mails de favoritos cuyo período de gracia ya
+    venció y los envía (si el favorito sigue vigente)."""
+    from app.notifications_service import send_due_favorite_emails
+
+    while True:
+        try:
+            await send_due_favorite_emails()
+        except Exception as e:
+            logger.error(f"favorite email flush error: {e}")
+        await asyncio.sleep(EMAIL_FLUSH_SECONDS)

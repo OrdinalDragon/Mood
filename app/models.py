@@ -122,6 +122,11 @@ class Notification(Document):
     event_count: Optional[int] = None
     read: bool = False
     created_at: Optional[datetime] = None
+    # Control del mail de recordatorio de favoritos: no se envía apenas se
+    # agrega el favorito, sino recién cuando vence email_due_at (período de
+    # gracia). Si el usuario saca el favorito antes, el mail nunca se manda.
+    email_due_at: Optional[datetime] = None
+    email_sent_at: Optional[datetime] = None
 
     class Settings:
         name = "notifications"
