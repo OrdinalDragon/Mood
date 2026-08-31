@@ -752,7 +752,7 @@ function MapPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <MapPin size={14} className="flex-shrink-0" />
-                        <span className="line-clamp-1">{selectedEvent.location.address}, {selectedEvent.location.city}</span>
+                        <span className="line-clamp-1">{selectedEvent.location.address ? `${selectedEvent.location.address}, ${selectedEvent.location.city}` : selectedEvent.location.city}</span>
                       </div>
                       {(selectedEvent as any).distance !== undefined && (
                         <div className="flex items-center gap-2">
