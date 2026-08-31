@@ -358,10 +358,19 @@ def fetch(url, session=None, retries=4):
                 last = r.status_code
                 continue
             r.raise_for_status()
-        except Exception as e:
+        except requests.exceptions.RequestException as e:
             last = e
+            # No re-intentar con backoff largo si el host no resuelve/conecta:
+            # es un fallo de infra que no se arregla en segundos. Un solo retry
+            # corto por si el DNS es transitorio, luego abandonar para que el
+            # resto de fuentes continúe.
+            is_conn = isinstance(e, (requests.exceptions.ConnectionError,
+                                     requests.exceptions.Timeout))
             logger.warning('fetch failed (%s): %s', url, e)
-            time.sleep(5 * attempt * random.uniform(0.8, 1.4))
+            if is_conn and attempt >= 2:
+                logger.warning('conn/dns error persisting for %s, skipping', url)
+                raise
+            time.sleep((3 if is_conn else 5) * attempt * random.uniform(0.8, 1.4))
     raise requests.HTTPError('give up after retries: %s' % (last,))
 
 
