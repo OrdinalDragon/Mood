@@ -14,6 +14,7 @@ import asyncio
 import datetime
 import json
 import logging
+import os
 import re
 import time
 import uuid
@@ -45,6 +46,43 @@ LAT_MIN, LAT_MAX, LNG_MIN, LNG_MAX = -34.9, -34.3, -58.7, -58.1
 SKIP_TITLES = ['evento falso', 'test', 'testing', 'ejemplo']
 
 MOOD_EMAIL = 'mood@mood.com'
+
+UPLOAD_DIR = '/app/uploads'
+EXT_BY_TYPE = {
+    'image/jpeg': '.jpg',
+    'image/png': '.png',
+    'image/webp': '.webp',
+    'image/gif': '.gif',
+    'image/svg+xml': '.svg',
+}
+
+
+def save_image_local(image_url: str):
+    """Descarga una imagen (eventos-scrapers) y la guarda en uploads/ para
+    no depender de servicios externos que puedan caerse. Devuelve la ruta
+    local /uploads/xxxx o None si falla."""
+    if not image_url or image_url.startswith('/uploads/'):
+        return image_url
+    try:
+        r = requests.get(
+            image_url,
+            timeout=30,
+            headers=H,
+        )
+        if r.status_code != 200 or len(r.content) < 100:
+            return None
+        ct = (r.headers.get('Content-Type') or 'image/jpeg').split(';')[0].strip()
+        if not ct.startswith('image/'):
+            return None
+        ext = EXT_BY_TYPE.get(ct, '.jpg')
+        os.makedirs(UPLOAD_DIR, exist_ok=True)
+        fname = uuid.uuid4().hex + ext
+        with open(os.path.join(UPLOAD_DIR, fname), 'wb') as f:
+            f.write(r.content)
+        return f'/uploads/{fname}'
+    except Exception as e:
+        logger.warning('image download failed for %s: %s', (image_url or '')[:60], e)
+        return None
 
 
 def arg_now():
@@ -344,6 +382,10 @@ async def run_scrape(window_days: int = 7):
         eid = slugify(norm['title'])
         if not eid:
             eid = 'evento-' + uuid.uuid4().hex[:6]
+
+        # Guardar la imagen localmente para no depender de CDN externos.
+        local_img = await asyncio.to_thread(save_image_local, norm['image_url'])
+
         ev = Event(
             id=eid,
             title=norm['title'],
@@ -356,8 +398,8 @@ async def run_scrape(window_days: int = 7):
             status='approved',
             created_by=mood.uid,
             author_name='MOOD',
-            image_url=norm['image_url'],
-            cover_image=norm['cover_image'],
+            image_url=local_img,
+            cover_image=local_img,
             is_free=norm['is_free'],
             is_outdoor=norm['is_outdoor'],
             created_at=datetime.datetime.utcnow(),

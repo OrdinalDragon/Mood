@@ -63,8 +63,13 @@ export function toLocalDatetimeString(date: any): string {
 
 /**
  * getEventImage - Devuelve la imagen del evento si tiene una,
- * o una imagen aleatoria de picsum como fallback.
+ * o un placeholder local (servido por nuestro propio frontend/backend)
+ * como fallback. Se usa una imagen local y no un servicio externo
+ * (picsum.photos) para que las imágenes nunca se rompan por caídas
+ * de terceros.
  */
+const EVENT_PLACEHOLDER = '/placeholder.svg';
+
 export function getEventImage(
   event: { image_url?: string | null; cover_image?: string | null; id: string; category?: string | string[] | null },
   size = '400/300',
@@ -72,8 +77,7 @@ export function getEventImage(
 ): string {
   if (event.image_url) return event.image_url;
   if (event.cover_image) return event.cover_image;
-  const s = seed || event.id;
-  return `https://picsum.photos/seed/${s}/${size}`;
+  return EVENT_PLACEHOLDER;
 }
 
 /**
