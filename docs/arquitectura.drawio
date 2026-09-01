@@ -29,7 +29,7 @@
         <mxCell id="n6" value="MongoDB 7&#10;mood_mongo :27017&#10;volumen mongodb_data" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#F3E5F5;strokeColor=#BA68C8;verticalAlign=top;fontSize=12;" vertex="1" parent="1">
           <mxGeometry x="730" y="430" width="210" height="80" as="geometry" />
         </mxCell>
-        <mxCell id="n7" value="Servicios Externos&#10;Eventbrite · QueHacemos&#10;Gmail SMTP · Gemini · Google" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#FFCA28;verticalAlign=middle;fontSize=12;" vertex="1" parent="1">
+        <mxCell id="n7" value="Servicios Externos&#10;Gmail SMTP · Gemini · Google OAuth" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#FFCA28;verticalAlign=middle;fontSize=12;" vertex="1" parent="1">
           <mxGeometry x="1000" y="215" width="180" height="100" as="geometry" />
         </mxCell>
 
@@ -51,7 +51,7 @@
         <mxCell id="e6" value="pymongo (Beanie ODM)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;" edge="1" source="n5" target="n6" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e7" value="scraper · email · gemini · oauth" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;" edge="1" source="n5" target="n7" parent="1">
+        <mxCell id="e7" value="email · gemini · oauth" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;" edge="1" source="n5" target="n7" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="e8" value="inserta / deduplica eventos" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;fontSize=11;" edge="1" source="n8" target="n6" parent="1">

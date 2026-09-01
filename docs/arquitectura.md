@@ -25,8 +25,6 @@ flowchart LR
     end
 
     subgraph Externos["Servicios Externos"]
-        EB["Eventbrite"]
-        QH["QueHacemos API"]
         SMTP["Gmail SMTP"]
         GEM["Google Gemini"]
         OAU["Google OAuth"]
@@ -42,8 +40,6 @@ flowchart LR
     FR -->|"fetch /api/..."| API
     API -->|"pymongo / Beanie ODM"| DB
     API --> SCR
-    SCR -->|"scraping cortes (30 dias)"| EB
-    SCR -->|"REST JSON"| QH
     SCR -->|"inserta / deduplica eventos"| DB
     API -->|"notificaciones por email"| SMTP
     API -->|"chat de ayuda"| GEM
@@ -92,6 +88,6 @@ sequenceDiagram
 
 ## Tareas de fondo del backend (app/main.py lifespan)
 
-- `scrape_loop`: cada 6 hs, consume Eventbrite + QueHacemos (ventana 30 dias), normaliza provincias/geocode e inserta eventos en MongoDB.
+- `scrape_loop`: cada 6 hs, consume fuentes externas de eventos (ventana 30 dias), normaliza provincias/geocode e inserta eventos en MongoDB.
 - `notification_scan_loop`: detecta eventos a 7 dias y envia emails (Gmail SMTP).
 - `favorite_email_flush_loop`: flush periodico de emails de favoritos.
