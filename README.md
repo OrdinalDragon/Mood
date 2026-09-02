@@ -8,7 +8,7 @@
 
 # Mood App 🎭
 
-> **Prototipo — Trabajo en Progreso**
+> **Trabajo en Progreso**
 
 Aplicación web full-stack que recomienda eventos cercanos según cómo te sentís. Decile a la app tu estado de ánimo actual y ella te muestra eventos locales que combinan con tu vibe.
 
@@ -110,7 +110,7 @@ docker compose up -d --build
 
 ## Estado del proyecto
 
-Este proyecto es actualmente un **prototipo**. Las funcionalidades están siendo desarrolladas y mejoradas activamente.
+Este proyecto es una aplicación web en producción activa. Las funcionalidades están siendo desarrolladas y mejoradas continuamente.
 
 Mejoras planificadas:
 - [ ] Integración de geolocalización para detección automática de cercanía
@@ -142,7 +142,7 @@ Este proyecto es privado. Todos los derechos reservados. Podés ver el código c
 
 # Mood App 🎭
 
-> **Prototype — Work in Progress**
+> **Work in Progress**
 
 A full-stack web application that recommends nearby events based on how you're feeling. Tell the app your current mood, and it surfaces local events that match your vibe.
 
@@ -244,7 +244,7 @@ docker compose up -d --build
 
 ## Project Status
 
-This project is currently a **prototype**. Features are being actively developed and improved.
+This project is a web application actively in production use. Features are being continuously developed and improved.
 
 Planned improvements:
 - [ ] Geolocation integration for automatic nearby detection
