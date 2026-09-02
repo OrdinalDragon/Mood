@@ -18,13 +18,17 @@ Aplicación web full-stack que recomienda eventos cercanos según cómo te sent�
 
 ## Funcionalidades
 
-- 🔐 Registro e inicio de sesión con JWT
+- 🔐 Registro e inicio de sesión con JWT + Google OAuth
 - 😊 Selección de estado de ánimo para reflejar cómo te sentís
-- 📍 Recomendaciones de eventos cercanos según tu estado de ánimo
-- 🌗 Modo oscuro con detección de preferencia del sistema
+- 📍 Recomendaciones de eventos cercanos según tu estado de ánimo y lista de próximos eventos
 - 🗺️ Mapa interactivo con búsqueda por ciudad y provincia (OpenStreetMap)
 - 📝 Subida de eventos por la comunidad con flujo de aprobación por administradores
-- 🗄️ Datos persistentes con MariaDB
+- 🤖 Scraper automático de eventos a nivel nacional (multi-fuente, ventana móvil de 30 días)
+- ⭐ Reviews y valoraciones de eventos (1 a 5 estrellas)
+- 📧 Notificaciones por email (recordatorios de eventos próximos y favoritos)
+- 💬 Chat de ayuda con IA (Gemini)
+- 🌗 Modo oscuro con detección de preferencia del sistema
+- 🗄️ Datos persistentes con MongoDB
 - 📱 Diseño responsive (mobile, tablet, desktop)
 
 ---
@@ -33,13 +37,13 @@ Aplicación web full-stack que recomienda eventos cercanos según cómo te sent�
 
 | Capa | Tecnología |
 |------|------------|
-| **Front-End** | React 19, TypeScript, Tailwind CSS v4, shadcn UI, Vite, React Router, React Leaflet, date-fns, Lucide React |
-| **Back-End** | FastAPI (Python 3.9+), SQLAlchemy, PyJWT |
-| **Base de datos** | MariaDB |
+| **Front-End** | React 19, TypeScript, Tailwind CSS v4, shadcn UI, Vite, React Router, React Leaflet, date-fns, framer-motion, Recharts |
+| **Back-End** | FastAPI (Python 3.9+), Beanie ODM (Motor), PyJWT |
+| **Base de datos** | MongoDB 7 |
 | **Contenedores** | Docker & Docker Compose |
 | **Proxy** | Nginx |
 | **Tunnel** | Cloudflare Tunnel |
-| **Geocoding** | Nominatim (OpenStreetMap) |
+| **Geocoding** | Nominatim (OpenStreetMap) + tabla local de ciudades para el scraper |
 
 ---
 
@@ -47,14 +51,14 @@ Aplicación web full-stack que recomienda eventos cercanos según cómo te sent�
 
 ### Info
 
-Puede que falten archivos por información privada y API keys.
+Puede que falten archivos por información privada y API keys (Google OAuth, Gemini, SMTP).
 
 ### Requisitos
 
 - Python 3.9+
 - Node.js 18+
 - Docker & Docker Compose (recomendado)
-- MariaDB (si no usás Docker)
+- MongoDB 7 (si no usás Docker)
 
 ### Inicio rápido (Docker)
 
@@ -89,13 +93,10 @@ docker compose up -d --build
    npm install
    ```
 
-5. **Ejecutar migraciones de base de datos**
+5. **Ejecutar la app**
    ```bash
-   # Asegurate de que MariaDB esté corriendo y las credenciales coincidan con .env
-   ```
+   # Asegurate de que MongoDB esté corriendo y que MONGO_URI coincida con .env
 
-6. **Ejecutar la app**
-   ```bash
    # Iniciar el back-end
    uvicorn app.main:app --reload
 
@@ -103,7 +104,7 @@ docker compose up -d --build
    npm run dev
    ```
 
-7. Abrir el navegador en `http://localhost:5173`
+6. Abrir el navegador en `http://localhost:5173`
 
 ---
 
@@ -113,8 +114,9 @@ Este proyecto es actualmente un **prototipo**. Las funcionalidades están siendo
 
 Mejoras planificadas:
 - [ ] Integración de geolocalización para detección automática de cercanía
-- [ ] Categorías de ánimo expandidas
-- [ ] Mejoras de responsive mobile
+- [ ] Push notifications (hoy las notificaciones son por email)
+- [ ] Sincronización con Google Calendar
+- [ ] Búsqueda por palabra clave en eventos
 
 ---
 
@@ -122,14 +124,9 @@ Mejoras planificadas:
 
 - Nicolás Schernetzki
 - Maylen Speso
-- Aylén Roldán
 - Gastón Crespo
-- Mariano Méndez
-- Joel Aliendre
-- Germán Ramírez
 - Luciano Bustamante
 - Diego Ruda
-- Leonardo Nieto
 
 ---
 
@@ -155,13 +152,17 @@ A full-stack web application that recommends nearby events based on how you're f
 
 ## Features
 
-- 🔐 User registration and login with JWT
+- 🔐 User registration and login with JWT + Google OAuth
 - 😊 Mood selection to reflect how you're feeling
-- 📍 Nearby event recommendations based on your current mood
-- 🌗 Dark mode with system preference detection
+- 📍 Event recommendations based on your current mood plus an upcoming events list
 - 🗺️ Interactive map with city and province search (OpenStreetMap)
 - 📝 Community event submission with admin approval workflow
-- 🗄️ Persistent user data with MariaDB
+- 🤖 Automatic nationwide event scraper (multi-source, 30-day rolling window)
+- ⭐ Event reviews and ratings (1 to 5 stars)
+- 📧 Email notifications (reminders for upcoming and favorite events)
+- 💬 AI-powered help chat (Gemini)
+- 🌗 Dark mode with system preference detection
+- 🗄️ Persistent user data with MongoDB
 - 📱 Responsive design (mobile, tablet, desktop)
 
 ---
@@ -170,13 +171,13 @@ A full-stack web application that recommends nearby events based on how you're f
 
 | Layer | Technology |
 |-------|-----------|
-| **Front-End** | React 19, TypeScript, Tailwind CSS v4, shadcn UI, Vite, React Router, React Leaflet, date-fns, Lucide React |
-| **Back-End** | FastAPI (Python 3.9+), SQLAlchemy, PyJWT |
-| **Database** | MariaDB |
+| **Front-End** | React 19, TypeScript, Tailwind CSS v4, shadcn UI, Vite, React Router, React Leaflet, date-fns, framer-motion, Recharts |
+| **Back-End** | FastAPI (Python 3.9+), Beanie ODM (Motor), PyJWT |
+| **Database** | MongoDB 7 |
 | **Containerization** | Docker & Docker Compose |
 | **Proxy** | Nginx |
 | **Tunnel** | Cloudflare Tunnel |
-| **Geocoding** | Nominatim (OpenStreetMap) |
+| **Geocoding** | Nominatim (OpenStreetMap) + local city table for the scraper |
 
 ---
 
@@ -184,14 +185,14 @@ A full-stack web application that recommends nearby events based on how you're f
 
 ### Info
 
-There may be missing files because of private info and API keys.
+There may be missing files because of private info and API keys (Google OAuth, Gemini, SMTP).
 
 ### Prerequisites
 
 - Python 3.9+
 - Node.js 18+
 - Docker & Docker Compose (recommended)
-- MariaDB (if not using Docker)
+- MongoDB 7 (if not using Docker)
 
 ### Quick Start (Docker)
 
@@ -226,13 +227,10 @@ docker compose up -d --build
    npm install
    ```
 
-5. **Run database migrations**
+5. **Run the app**
    ```bash
-   # Ensure MariaDB is running and credentials match .env
-   ```
+   # Make sure MongoDB is running and MONGO_URI matches .env
 
-6. **Run the app**
-   ```bash
    # Start the back-end
    uvicorn app.main:app --reload
 
@@ -240,7 +238,7 @@ docker compose up -d --build
    npm run dev
    ```
 
-7. Open your browser at `http://localhost:5173`
+6. Open your browser at `http://localhost:5173`
 
 ---
 
@@ -250,8 +248,9 @@ This project is currently a **prototype**. Features are being actively developed
 
 Planned improvements:
 - [ ] Geolocation integration for automatic nearby detection
-- [ ] Expanded mood categories
-- [ ] Mobile-responsive polish
+- [ ] Push notifications (currently email only)
+- [ ] Google Calendar sync
+- [ ] Keyword search in events
 
 ---
 
@@ -259,14 +258,9 @@ Planned improvements:
 
 - Nicolás Schernetzki
 - Maylen Speso
-- Aylén Roldán
 - Gastón Crespo
-- Mariano Méndez
-- Joel Aliendre
-- Germán Ramírez
 - Luciano Bustamante
 - Diego Ruda
-- Leonardo Nieto
 
 ---
 
