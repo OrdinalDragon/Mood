@@ -113,10 +113,10 @@ docker compose up -d --build
 Este proyecto es una aplicación web en producción activa. Las funcionalidades están siendo desarrolladas y mejoradas continuamente.
 
 Mejoras planificadas:
-- [ ] Integración de geolocalización para detección automática de cercanía
+- [x] Integración de geolocalización para detección automática de cercanía
 - [ ] Push notifications (hoy las notificaciones son por email)
 - [ ] Sincronización con Google Calendar
-- [ ] Búsqueda por palabra clave en eventos
+- [x] Búsqueda por palabra clave en eventos
 
 ---
 
@@ -247,10 +247,10 @@ docker compose up -d --build
 This project is a web application actively in production use. Features are being continuously developed and improved.
 
 Planned improvements:
-- [ ] Geolocation integration for automatic nearby detection
+- [x] Geolocation integration for automatic nearby detection
 - [ ] Push notifications (currently email only)
 - [ ] Google Calendar sync
-- [ ] Keyword search in events
+- [x] Keyword search in events
 
 ---
 
