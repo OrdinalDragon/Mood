@@ -80,7 +80,7 @@ jobs:
             .
       - name: Guardar reporte
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: semgrep-sarif
           path: semgrep.sarif
@@ -134,7 +134,7 @@ jobs:
             "mood-${{ matrix.name }}:ci"
       - name: Guardar reporte
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: trivy-${{ matrix.name }}
           path: trivy-${{ matrix.name }}.sarif
