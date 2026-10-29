@@ -43,20 +43,44 @@ async def lifespan(app: FastAPI):
     await close_db()
 
 
+ENABLE_DOCS = os.getenv("ENABLE_DOCS", "0").strip().lower() in ("1", "true", "yes")
+
+
+def _cors_origins() -> list[str]:
+    """Orígenes permitidos: el frontend propio + los que se declaren en CORS_ORIGINS."""
+    origins = set()
+    frontend_url = os.getenv("FRONTEND_URL", "").strip().rstrip("/")
+    if frontend_url:
+        origins.add(frontend_url)
+    raw = os.getenv("CORS_ORIGINS", "")
+    origins.update(o.strip().rstrip("/") for o in raw.split(",") if o.strip())
+    # Desarrollo local
+    origins.update({
+        "http://localhost",
+        "http://127.0.0.1",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    })
+    return sorted(origins)
+
+
 app = FastAPI(
     title="MOOD API",
     description="API para explorá tu ciudad - Gestor de eventos",
     version="1.0.0",
     lifespan=lifespan,
+    docs_url="/docs" if ENABLE_DOCS else None,
+    redoc_url="/redoc" if ENABLE_DOCS else None,
+    openapi_url="/openapi.json" if ENABLE_DOCS else None,
 )
 
-# CORS middleware
+# CORS middleware (restringido: la app usa tokens Bearer, no cookies)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=_cors_origins(),
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 # Servir archivos subidos
@@ -87,7 +111,10 @@ app.include_router(analytics.router)
 
 @app.get("/")
 async def root():
-    return {"message": "MOOD API is running", "docs": "/docs"}
+    payload = {"message": "MOOD API is running"}
+    if ENABLE_DOCS:
+        payload["docs"] = "/docs"
+    return payload
 
 
 @app.get("/health")

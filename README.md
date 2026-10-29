@@ -38,7 +38,7 @@ Aplicación web full-stack que recomienda eventos cercanos según cómo te sent�
 | Capa | Tecnología |
 |------|------------|
 | **Front-End** | React 19, TypeScript, Tailwind CSS v4, shadcn UI, Vite, React Router, React Leaflet, date-fns, framer-motion, Recharts |
-| **Back-End** | FastAPI (Python 3.9+), Beanie ODM (Motor), PyJWT |
+| **Back-End** | FastAPI (Python 3.12+), Beanie ODM (Motor), PyJWT |
 | **Base de datos** | MongoDB 7 |
 | **Contenedores** | Docker & Docker Compose |
 | **Proxy** | Nginx |
@@ -55,8 +55,8 @@ Puede que falten archivos por información privada y API keys (Google OAuth, Gem
 
 ### Requisitos
 
-- Python 3.9+
-- Node.js 18+
+- Python 3.12+
+- Node.js 20+
 - Docker & Docker Compose (recomendado)
 - MongoDB 7 (si no usás Docker)
 
@@ -66,6 +66,7 @@ Puede que falten archivos por información privada y API keys (Google OAuth, Gem
 git clone https://github.com/MoodGrupo6/Prototipo-mood.git
 cd Prototipo-mood
 cp .env.example .env
+# JWT_SECRET: openssl rand -hex 32
 docker compose up -d --build
 ```
 
@@ -81,6 +82,7 @@ docker compose up -d --build
    ```bash
    cp .env.example .env
    # Editar .env con tus credenciales de DB y API keys
+   # Generar JWT_SECRET con: openssl rand -hex 32
    ```
 
 3. **Instalar dependencias del back-end**
@@ -104,7 +106,25 @@ docker compose up -d --build
    npm run dev
    ```
 
-6. Abrir el navegador en `http://localhost:5173`
+6. Abrir el navegador en `http://localhost:3000`
+
+---
+
+## Seguridad
+
+Medidas implementadas en la última revisión:
+
+- Contraseñas con **bcrypt** (costo 12) y migración transparente de hashes SHA-256 antiguos al iniciar sesión.
+- `JWT_SECRET` obligatorio (sin valor por defecto); el backend no arranca si falta o es inseguro.
+- Tokens de verificación de email (24 h) y de reseteo de contraseña (1 h) con expiración.
+- Respuestas genéricas en recuperación de contraseña y reenvío de verificación (sin enumeración de usuarios).
+- Rate limiting en Nginx para `/api/auth/` y `/api/`; cabeceras de seguridad y CSP estricta.
+- Uploads: límite de 10 MB leído en streaming, validación real de formato con Pillow y tope de píxeles.
+- MongoDB, backend y frontend sin puertos publicados al host; solo Nginx expone el puerto 80.
+- Imágenes Docker fijadas a versiones parcheadas (Python 3.12, MongoDB 7.0.45, Nginx 1.31.8, cloudflared 2026.10.5) y backend ejecutado sin privilegios.
+- Swagger/OpenAPI deshabilitados por defecto (`ENABLE_DOCS=0`).
+
+Riesgos residuales conocidos: el token se guarda en `localStorage` (mitigado por CSP, pero un XSS podría robarlo); `google-generativeai` está deprecado (migración a `google-genai` pendiente); el servidor de desarrollo de Vite queda limitado a `127.0.0.1` y conserva un aviso leve de `esbuild` que solo afecta al dev server en Windows.
 
 ---
 
@@ -172,7 +192,7 @@ A full-stack web application that recommends nearby events based on how you're f
 | Layer | Technology |
 |-------|-----------|
 | **Front-End** | React 19, TypeScript, Tailwind CSS v4, shadcn UI, Vite, React Router, React Leaflet, date-fns, framer-motion, Recharts |
-| **Back-End** | FastAPI (Python 3.9+), Beanie ODM (Motor), PyJWT |
+| **Back-End** | FastAPI (Python 3.12+), Beanie ODM (Motor), PyJWT |
 | **Database** | MongoDB 7 |
 | **Containerization** | Docker & Docker Compose |
 | **Proxy** | Nginx |
@@ -189,8 +209,8 @@ There may be missing files because of private info and API keys (Google OAuth, G
 
 ### Prerequisites
 
-- Python 3.9+
-- Node.js 18+
+- Python 3.12+
+- Node.js 20+
 - Docker & Docker Compose (recommended)
 - MongoDB 7 (if not using Docker)
 
@@ -200,6 +220,7 @@ There may be missing files because of private info and API keys (Google OAuth, G
 git clone https://github.com/MoodGrupo6/Prototipo-mood.git
 cd Prototipo-mood
 cp .env.example .env
+# JWT_SECRET: openssl rand -hex 32
 docker compose up -d --build
 ```
 
@@ -215,6 +236,7 @@ docker compose up -d --build
    ```bash
    cp .env.example .env
    # Edit .env with your DB credentials and any API keys
+   # Generate JWT_SECRET with: openssl rand -hex 32
    ```
 
 3. **Install back-end dependencies**
@@ -238,7 +260,25 @@ docker compose up -d --build
    npm run dev
    ```
 
-6. Open your browser at `http://localhost:5173`
+6. Open your browser at `http://localhost:3000`
+
+---
+
+## Security
+
+Measures implemented in the latest review:
+
+- **bcrypt** password hashing (cost 12) with transparent migration of legacy SHA-256 hashes on login.
+- Mandatory `JWT_SECRET` (no default); the backend refuses to start if it is missing or weak.
+- Expiring email verification (24 h) and password reset (1 h) tokens.
+- Generic responses for password recovery and verification resend (no user enumeration).
+- Nginx rate limiting for `/api/auth/` and `/api/`; security headers and a strict CSP.
+- Uploads: 10 MB streaming limit, real Pillow format validation, and a pixel cap.
+- MongoDB, backend and frontend publish no host ports; only Nginx exposes port 80.
+- Docker images pinned to patched versions (Python 3.12, MongoDB 7.0.45, Nginx 1.31.8, cloudflared 2026.10.5) and the backend runs as a non-root user.
+- Swagger/OpenAPI disabled by default (`ENABLE_DOCS=0`).
+
+Known residual risks: the token is stored in `localStorage` (mitigated by CSP, but an XSS could steal it); `google-generativeai` is deprecated (migration to `google-genai` pending); the Vite dev server is bound to `127.0.0.1` and keeps one low-severity `esbuild` advisory that only affects the Windows dev server.
 
 ---
 

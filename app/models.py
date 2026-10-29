@@ -46,9 +46,11 @@ class User(Document):
     password_hash: Optional[str] = None
     email_verified: str = "0"
     verification_token: Optional[str] = None
+    verification_token_expires_at: Optional[datetime] = None
     auth_provider: str = "email"
     google_id: Optional[str] = None
     reset_token: Optional[str] = None
+    reset_token_expires_at: Optional[datetime] = None
     favorites: list = []
     email_notifications: bool = True
     banned: bool = False

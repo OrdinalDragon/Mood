@@ -7,3 +7,6 @@ docker-compose.yml
 .env*
 mood_db_backup.sql
 Thumbs.db
+uploads
+exposicion
+shalion_prep
