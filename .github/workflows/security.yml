@@ -121,7 +121,7 @@ jobs:
       - name: Build ${{ matrix.name }}
         run: docker build -t mood-${{ matrix.name }}:ci -f ${{ matrix.dockerfile }} .
       - name: Trivy ${{ matrix.name }}
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: mood-${{ matrix.name }}:ci
           format: sarif
