@@ -121,14 +121,17 @@ jobs:
       - name: Build ${{ matrix.name }}
         run: docker build -t mood-${{ matrix.name }}:ci -f ${{ matrix.dockerfile }} .
       - name: Trivy ${{ matrix.name }}
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
-        with:
-          image-ref: mood-${{ matrix.name }}:ci
-          format: sarif
-          output: trivy-${{ matrix.name }}.sarif
-          severity: CRITICAL,HIGH
-          ignore-unfixed: true
-          exit-code: "1"
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "$PWD:/work" \
+            aquasec/trivy:0.76.1 image \
+            --severity CRITICAL,HIGH \
+            --ignore-unfixed \
+            --exit-code 1 \
+            --format sarif \
+            --output "/work/trivy-${{ matrix.name }}.sarif" \
+            "mood-${{ matrix.name }}:ci"
       - name: Guardar reporte
         if: always()
         uses: actions/upload-artifact@v4
