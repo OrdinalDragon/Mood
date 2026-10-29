@@ -1,12 +1,26 @@
 /**
  * src/hooks/useAuth.tsx - Hook de Autenticación
- * Maneja la autenticación con el backend FastAPI.
- * Usa JWT almacenado en localStorage.
+ * Mantiene el access token en memoria y restaura la sesión con el refresh
+ * token HttpOnly al cargar la página.
  */
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { UserProfile } from '../types';
-import { login as apiLogin, register as apiRegister, logout as apiLogout, getMe, googleLogin as apiGoogleLogin, sendVerification as apiSendVerification, resendVerification as apiResendVerification, forgotPassword as apiForgotPassword, resetPassword as apiResetPassword, updateProfile as apiUpdateProfile } from '../lib/api';
+import {
+  AuthResponse,
+  login as apiLogin,
+  register as apiRegister,
+  logout as apiLogout,
+  getMe,
+  googleLogin as apiGoogleLogin,
+  sendVerification as apiSendVerification,
+  resendVerification as apiResendVerification,
+  forgotPassword as apiForgotPassword,
+  resetPassword as apiResetPassword,
+  updateProfile as apiUpdateProfile,
+  mfaVerify as apiMfaVerify,
+  refreshAccessToken,
+} from '../lib/api';
 
 interface AuthUser {
   uid: string;
@@ -16,6 +30,10 @@ interface AuthUser {
   role: string;
   favorites: string[];
   created_at: string;
+  email_verified?: string;
+  auth_provider?: string;
+  mfa_enabled?: boolean;
+  has_password?: boolean;
   [key: string]: any;
 }
 
@@ -24,15 +42,16 @@ interface AuthContextType {
   profile: UserProfile | null;
   loading: boolean;
   isAdmin: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<AuthResponse>;
   register: (email: string, password: string, displayName?: string) => Promise<{ message: string }>;
-  googleLogin: (credential: string) => Promise<void>;
+  googleLogin: (credential: string) => Promise<AuthResponse>;
+  verifyMfa: (mfaToken: string, code: string) => Promise<void>;
   sendVerification: () => Promise<void>;
   resendVerification: (email: string) => Promise<void>;
   forgotPassword: (email: string) => Promise<void>;
   resetPassword: (token: string, password: string) => Promise<void>;
   updateProfile: (data: { display_name?: string; photo_url?: string; email_notifications?: boolean }) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -40,15 +59,16 @@ const AuthContext = createContext<AuthContextType>({
   profile: null,
   loading: true,
   isAdmin: false,
-  login: async () => {},
+  login: async () => ({}),
   register: async () => ({} as { message: string }),
-  googleLogin: async () => {},
+  googleLogin: async () => ({}),
+  verifyMfa: async () => {},
   sendVerification: async () => {},
   resendVerification: async () => {},
   forgotPassword: async () => {},
   resetPassword: async () => {},
   updateProfile: async () => {},
-  logout: () => {},
+  logout: async () => {},
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -57,22 +77,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const checkAuth = async () => {
-      const token = localStorage.getItem('token');
-      if (token) {
-        try {
+      try {
+        // Restaura la sesión con la cookie HttpOnly; no hay token persistente.
+        const refreshed = await refreshAccessToken();
+        if (refreshed) {
           const userData = await getMe();
           setUser(userData as unknown as AuthUser);
-        } catch (error) {
-          localStorage.removeItem('token');
         }
+      } catch {
+        setUser(null);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     checkAuth();
   }, []);
 
-  const login = async (email: string, password: string) => {
-    await apiLogin(email, password);
+  const login = async (
+    email: string,
+    password: string,
+    rememberMe: boolean = false,
+  ): Promise<AuthResponse> => {
+    const response = await apiLogin(email, password, rememberMe);
+    if (response.access_token) {
+      const userData = await getMe();
+      setUser(userData as unknown as AuthUser);
+    }
+    return response;
+  };
+
+  const verifyMfa = async (mfaToken: string, code: string) => {
+    const response = await apiMfaVerify(mfaToken, code);
+    if (!response.access_token) throw new Error('No se pudo completar el segundo factor');
     const userData = await getMe();
     setUser(userData as unknown as AuthUser);
   };
@@ -97,26 +133,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await apiResetPassword(token, password);
   };
 
-  const googleLogin = async (credential: string) => {
-    await apiGoogleLogin(credential);
-    const userData = await getMe();
-    setUser(userData as unknown as AuthUser);
+  const googleLogin = async (credential: string): Promise<AuthResponse> => {
+    const response = await apiGoogleLogin(credential);
+    if (response.access_token) {
+      const userData = await getMe();
+      setUser(userData as unknown as AuthUser);
+    }
+    return response;
   };
 
-  const updateProfile = async (data: { display_name?: string; photo_url?: string; email_notifications?: boolean }) => {
+  const updateProfile = async (data: {
+    display_name?: string;
+    photo_url?: string;
+    email_notifications?: boolean;
+  }) => {
     const updated = await apiUpdateProfile(data);
     setUser(updated as unknown as AuthUser);
   };
 
-  const logout = () => {
-    apiLogout();
+  const logout = async () => {
+    await apiLogout();
     setUser(null);
   };
 
-  const isAdmin = user?.role === 'admin' || user?.email === 'schernetzki96@gmail.com';
+  const isAdmin = user?.role === 'admin';
 
   return (
-    <AuthContext.Provider value={{ user, profile: user as unknown as UserProfile, loading, isAdmin, login, register, googleLogin, sendVerification, resendVerification, forgotPassword, resetPassword, updateProfile, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        profile: user as unknown as UserProfile,
+        loading,
+        isAdmin,
+        login,
+        register,
+        googleLogin,
+        verifyMfa,
+        sendVerification,
+        resendVerification,
+        forgotPassword,
+        resetPassword,
+        updateProfile,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

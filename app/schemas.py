@@ -98,6 +98,12 @@ class UserResponse(BaseModel):
     created_at: Optional[datetime] = None
     favorites: list[str] = []
     email_notifications: bool = True
+    email_verified: str = "0"
+    auth_provider: str = "email"
+    mfa_enabled: bool = False
+    # Las cuentas creadas solo con Google no tienen contrasena local; el
+    # frontend usa esto para no ofrecer TOTP local en esos casos.
+    has_password: bool = False
 
 
 class UserAdminResponse(BaseModel):

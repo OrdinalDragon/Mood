@@ -24,6 +24,10 @@ RUN VITE_API_URL=/api VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID} VITE_FRONTE
 # Stage 2: Serve with Nginx
 FROM nginx:1.31.8-alpine
 
+# Actualizar paquetes de la imagen base (brotli/curl y similares) para no
+# arrastrar vulnerabilidades ya corregidas por Alpine.
+RUN apk upgrade --no-cache
+
 # Copy built files from builder
 COPY --from=builder /app/dist /usr/share/nginx/html
 

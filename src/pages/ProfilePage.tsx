@@ -1,6 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { changePassword, getMyEvents, uploadImage, getUserRating } from '../lib/api';
+import {
+  changePassword,
+  getMyEvents,
+  uploadImage,
+  getUserRating,
+  mfaSetup,
+  mfaEnable,
+  mfaDisable,
+  type MfaSetupResponse,
+} from '../lib/api';
 import { Event, UserRating } from '../types';
 import { UserReviewsPanel } from '../components/UserReviewsPanel';
 import { StarRatingDisplay } from '../components/StarRating';
@@ -11,7 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Calendar, Mail, Shield, User as UserIcon, Camera, KeyRound, Loader2, MapPin, Clock, X, Star, Bell } from 'lucide-react';
+import { Calendar, Mail, Shield, User as UserIcon, Camera, KeyRound, Loader2, MapPin, Clock, X, Star, Bell, Smartphone, Copy } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -44,7 +53,7 @@ const statusConfig: Record<string, { label: string; className: string }> = {
 };
 
 export const ProfilePage: React.FC = () => {
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, logout } = useAuth();
   const [myEvents, setMyEvents] = useState<Event[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
   const [organizerRating, setOrganizerRating] = useState<UserRating | null>(null);
@@ -66,6 +75,17 @@ export const ProfilePage: React.FC = () => {
   // Email reminders toggle state
   const [emailNotif, setEmailNotif] = useState(true);
   const [savingNotif, setSavingNotif] = useState(false);
+
+  // MFA state
+  const [mfaOpen, setMfaOpen] = useState(false);
+  const [mfaSetupData, setMfaSetupData] = useState<MfaSetupResponse | null>(null);
+  const [mfaCode, setMfaCode] = useState('');
+  const [mfaPassword, setMfaPassword] = useState('');
+  const [mfaRecoveryCodes, setMfaRecoveryCodes] = useState<string[] | null>(null);
+  const [mfaLoading, setMfaLoading] = useState(false);
+  const [mfaDisableOpen, setMfaDisableOpen] = useState(false);
+  const [mfaDisablePass, setMfaDisablePass] = useState('');
+  const [mfaDisableCode, setMfaDisableCode] = useState('');
 
   useEffect(() => {
     if (user) {
@@ -114,6 +134,10 @@ export const ProfilePage: React.FC = () => {
     );
   }
 
+  // Las cuentas creadas solo con Google no tienen contrasena local: su
+  // segundo factor se administra en Google para evitar lockouts por TOTP.
+  const totpAvailable = user.has_password !== false;
+
   const handleSaveProfile = async () => {
     setSavingProfile(true);
     try {
@@ -143,8 +167,8 @@ export const ProfilePage: React.FC = () => {
   };
 
   const handleChangePassword = async () => {
-    if (newPass.length < 6) {
-      toast.error('La nueva contraseña debe tener al menos 6 caracteres');
+    if (newPass.length < 8) {
+      toast.error('La nueva contraseña debe tener al menos 8 caracteres');
       return;
     }
     if (newPass !== confirmPass) {
@@ -154,15 +178,78 @@ export const ProfilePage: React.FC = () => {
     setSavingPass(true);
     try {
       await changePassword(currentPass, newPass);
-      toast.success('Contraseña actualizada');
       setPassOpen(false);
       setCurrentPass('');
       setNewPass('');
       setConfirmPass('');
+      toast.success('Contraseña actualizada. Iniciá sesión de nuevo.');
+      await logout();
     } catch (err: any) {
       toast.error(err?.message || 'Error al cambiar la contraseña');
     } finally {
       setSavingPass(false);
+    }
+  };
+
+  const handleStartMfa = async () => {
+    setMfaLoading(true);
+    try {
+      const data = await mfaSetup();
+      setMfaSetupData(data);
+      setMfaCode('');
+      setMfaRecoveryCodes(null);
+      setMfaOpen(true);
+    } catch (err: any) {
+      toast.error(err?.message || 'No se pudo iniciar la configuración de MFA');
+    } finally {
+      setMfaLoading(false);
+    }
+  };
+
+  const handleEnableMfa = async () => {
+    if (!mfaCode.trim()) {
+      toast.error('Ingresá el código de 6 dígitos');
+      return;
+    }
+    setMfaLoading(true);
+    try {
+      const result = await mfaEnable(mfaCode.trim(), mfaPassword);
+      setMfaRecoveryCodes(result.recovery_codes);
+      toast.success('MFA activado');
+    } catch (err: any) {
+      toast.error(err?.message || 'Código inválido');
+    } finally {
+      setMfaLoading(false);
+    }
+  };
+
+  const handleDisableMfa = async () => {
+    if (!mfaDisableCode.trim()) {
+      toast.error('Ingresá el código de tu app de autenticación');
+      return;
+    }
+    setMfaLoading(true);
+    try {
+      await mfaDisable(mfaDisablePass, mfaDisableCode.trim());
+      setMfaDisableOpen(false);
+      setMfaDisablePass('');
+      setMfaDisableCode('');
+      toast.success('MFA desactivado. Iniciá sesión de nuevo.');
+      await logout();
+    } catch (err: any) {
+      toast.error(err?.message || 'No se pudo desactivar MFA');
+    } finally {
+      setMfaLoading(false);
+    }
+  };
+
+  const copyRecoveryCodes = async () => {
+    if (!mfaRecoveryCodes) return;
+    try {
+      await navigator.clipboard.writeText(mfaRecoveryCodes.join('\n'));
+      toast.success('Códigos copiados');
+    } catch {
+      toast.error('No se pudieron copiar los códigos');
     }
   };
 
@@ -234,6 +321,33 @@ export const ProfilePage: React.FC = () => {
                 <p className="text-sm text-muted-foreground">Cambiá tu contraseña</p>
               </div>
               <Button variant="outline" onClick={() => setPassOpen(true)}>Cambiar</Button>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className="p-3 bg-primary/15 rounded-lg">
+                <Smartphone className="w-6 h-6 text-primary" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-card-foreground">Verificación en dos pasos</h3>
+                <p className="text-sm text-muted-foreground">
+                  {!totpAvailable
+                    ? 'Usá la verificación en dos pasos de Google'
+                    : user.mfa_enabled
+                      ? 'Activada con app de autenticación'
+                      : 'Agregá un segundo factor a tu cuenta'}
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                disabled={mfaLoading || !totpAvailable}
+                onClick={() => {
+                  if (user.mfa_enabled) setMfaDisableOpen(true);
+                  else handleStartMfa();
+                }}
+              >
+                {!totpAvailable ? 'Google' : user.mfa_enabled ? 'Desactivar' : 'Activar'}
+              </Button>
             </CardContent>
           </Card>
           <Card>
@@ -444,7 +558,7 @@ export const ProfilePage: React.FC = () => {
                 type="password"
                 value={newPass}
                 onChange={e => setNewPass(e.target.value)}
-                placeholder="Mínimo 6 caracteres"
+                placeholder="Mínimo 8 caracteres"
               />
             </div>
             <div>
@@ -462,6 +576,140 @@ export const ProfilePage: React.FC = () => {
               <Button className="bg-primary text-primary-foreground" onClick={handleChangePassword} disabled={savingPass}>
                 {savingPass && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
                 Cambiar contraseña
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* MFA setup dialog */}
+      <Dialog
+        open={mfaOpen}
+        onOpenChange={(open) => {
+          setMfaOpen(open);
+          if (!open) {
+            setMfaSetupData(null);
+            setMfaRecoveryCodes(null);
+            setMfaCode('');
+            setMfaPassword('');
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Activar verificación en dos pasos</DialogTitle>
+            <DialogDescription>
+              Escaneá el código QR con Google Authenticator, Authy o una app compatible con TOTP.
+            </DialogDescription>
+          </DialogHeader>
+
+          {mfaRecoveryCodes ? (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Guardá estos códigos de recuperación en un lugar seguro. Cada uno se puede usar una sola vez y no se volverán a mostrar.
+              </p>
+              <div className="grid grid-cols-2 gap-2 rounded-lg border border-border bg-muted p-3 font-mono text-sm">
+                {mfaRecoveryCodes.map((code) => (
+                  <span key={code}>{code}</span>
+                ))}
+              </div>
+              <div className="flex justify-end gap-3">
+                <Button variant="outline" onClick={copyRecoveryCodes}>
+                  <Copy size={16} className="mr-1" /> Copiar
+                </Button>
+                <Button className="bg-primary text-primary-foreground" onClick={() => setMfaOpen(false)}>
+                  Listo
+                </Button>
+              </div>
+            </div>
+          ) : mfaSetupData ? (
+            <div className="space-y-4">
+              <img
+                src={mfaSetupData.qr_data_uri}
+                alt="Código QR para configurar MFA"
+                className="mx-auto h-48 w-48 rounded-lg border border-border bg-white p-2"
+              />
+              <p className="text-sm text-muted-foreground">
+                Si no podés escanear el QR, ingresá este secreto en tu app:
+              </p>
+              <code className="block break-all rounded-lg border border-border bg-muted p-2 text-center text-sm">
+                {mfaSetupData.secret}
+              </code>
+              <div>
+                <Label htmlFor="mfa_enable_password">Contraseña actual</Label>
+                <Input
+                  id="mfa_enable_password"
+                  type="password"
+                  autoComplete="current-password"
+                  value={mfaPassword}
+                  onChange={(e) => setMfaPassword(e.target.value)}
+                  placeholder="Tu contraseña actual"
+                />
+              </div>
+              <div>
+                <Label htmlFor="mfa_enable_code">Código de 6 dígitos</Label>
+                <Input
+                  id="mfa_enable_code"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  placeholder="123456"
+                  value={mfaCode}
+                  onChange={(e) => setMfaCode(e.target.value)}
+                />
+              </div>
+              <div className="flex justify-end gap-3">
+                <Button variant="outline" onClick={() => setMfaOpen(false)}>Cancelar</Button>
+                <Button className="bg-primary text-primary-foreground" onClick={handleEnableMfa} disabled={mfaLoading}>
+                  {mfaLoading && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
+                  Activar
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex justify-center py-6">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* MFA disable dialog */}
+      <Dialog open={mfaDisableOpen} onOpenChange={setMfaDisableOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Desactivar verificación en dos pasos</DialogTitle>
+            <DialogDescription>
+              Confirmá con tu contraseña y un código de tu app de autenticación.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="mfa_disable_password">Contraseña</Label>
+              <Input
+                id="mfa_disable_password"
+                type="password"
+                autoComplete="current-password"
+                value={mfaDisablePass}
+                onChange={(e) => setMfaDisablePass(e.target.value)}
+                placeholder="Tu contraseña actual"
+              />
+            </div>
+            <div>
+              <Label htmlFor="mfa_disable_code">Código</Label>
+              <Input
+                id="mfa_disable_code"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                value={mfaDisableCode}
+                onChange={(e) => setMfaDisableCode(e.target.value)}
+                placeholder="123456 o ABCD-EF12"
+              />
+            </div>
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setMfaDisableOpen(false)}>Cancelar</Button>
+              <Button variant="destructive" onClick={handleDisableMfa} disabled={mfaLoading}>
+                {mfaLoading && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
+                Desactivar
               </Button>
             </div>
           </div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -29,14 +29,31 @@ export const LoginDialog: React.FC<LoginDialogProps> = ({ open, onOpenChange, on
   const [rememberMe, setRememberMe] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resending, setResending] = useState(false);
-  const { login: loginContext, googleLogin: googleLoginContext, resendVerification } = useAuth();
+  const [mfaToken, setMfaToken] = useState<string | null>(null);
+  const [mfaCode, setMfaCode] = useState('');
+  const [mfaError, setMfaError] = useState('');
+  const { login: loginContext, googleLogin: googleLoginContext, verifyMfa, resendVerification } = useAuth();
+
+  useEffect(() => {
+    if (!open) {
+      setMfaToken(null);
+      setMfaCode('');
+      setMfaError('');
+      setError('');
+    }
+  }, [open]);
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
     try {
-      await loginContext(email, password, rememberMe);
+      const response = await loginContext(email, password, rememberMe);
+      if (response.mfa_required && response.mfa_token) {
+        setMfaToken(response.mfa_token);
+        toast.info('Ingresá el código de tu app de autenticación');
+        return;
+      }
       onOpenChange(false);
       toast.success('Bienvenido!');
     } catch (err: any) {
@@ -46,9 +63,73 @@ export const LoginDialog: React.FC<LoginDialogProps> = ({ open, onOpenChange, on
     }
   };
 
+  const handleMfaLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!mfaToken) return;
+    setLoading(true);
+    setMfaError('');
+    try {
+      await verifyMfa(mfaToken, mfaCode.trim());
+      onOpenChange(false);
+      toast.success('Bienvenido!');
+    } catch (err: any) {
+      setMfaError(err.message || 'Código inválido');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
+        {mfaToken ? (
+          <>
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold text-center">
+                Verificación en dos pasos
+              </DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
+              Abrí tu app de autenticación e ingresá el código de 6 dígitos. También podés usar un código de recuperación.
+            </p>
+            <form onSubmit={handleMfaLogin} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="mfa-code">Código</Label>
+                <Input
+                  id="mfa-code"
+                  autoFocus
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  placeholder="123456 o ABCD-EF12"
+                  value={mfaCode}
+                  onChange={(e) => setMfaCode(e.target.value)}
+                  required
+                />
+              </div>
+              {mfaError && (
+                <div className="text-sm text-red-500 text-center bg-red-50 p-2 rounded-md">
+                  {mfaError}
+                </div>
+              )}
+              <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={loading}>
+                {loading ? 'Verificando...' : 'Verificar'}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full"
+                onClick={() => {
+                  setMfaToken(null);
+                  setMfaCode('');
+                  setMfaError('');
+                }}
+              >
+                Volver
+              </Button>
+            </form>
+          </>
+        ) : (
+        <>
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-center">¡Bienvenido de vuelta!</DialogTitle>
         </DialogHeader>
@@ -58,7 +139,12 @@ export const LoginDialog: React.FC<LoginDialogProps> = ({ open, onOpenChange, on
             onSuccess={async (credentialResponse) => {
               if (credentialResponse.credential) {
                 try {
-                  await googleLoginContext(credentialResponse.credential);
+                  const response = await googleLoginContext(credentialResponse.credential);
+                  if (response.mfa_required && response.mfa_token) {
+                    setMfaToken(response.mfa_token);
+                    toast.info('Ingresá el código de tu app de autenticación');
+                    return;
+                  }
                   onOpenChange(false);
                   toast.success('Bienvenido!');
                 } catch (err: any) {
@@ -194,6 +280,8 @@ export const LoginDialog: React.FC<LoginDialogProps> = ({ open, onOpenChange, on
           onOpenChange={setShowForgotPassword}
           onBackToLogin={() => setShowForgotPassword(false)}
         />
+        </>
+        )}
       </DialogContent>
     </Dialog>
   );

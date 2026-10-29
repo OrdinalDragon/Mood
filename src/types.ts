@@ -166,6 +166,10 @@ export interface UserProfile {
   created_at: any;
   updated_at?: any;
   email_notifications?: boolean;
+  email_verified?: string;
+  auth_provider?: string;
+  mfa_enabled?: boolean;
+  has_password?: boolean;
 }
 
 

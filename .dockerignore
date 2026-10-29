@@ -10,3 +10,12 @@ Thumbs.db
 uploads
 exposicion
 shalion_prep
+backups
+PLAN_SEGURIDAD.md
+.github
+tests
+scripts
+pytest.ini
+requirements-dev.txt
+semgrep-local.sarif
+trivy-*.sarif

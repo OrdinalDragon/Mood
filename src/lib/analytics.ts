@@ -4,6 +4,7 @@
 
 import type { SummaryStats } from '../types';
 import { isConsentGiven } from './consent';
+import { getToken, refreshAccessToken } from './api';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 const CLIENT_ID_KEY = 'mood_client_id';
@@ -90,11 +91,20 @@ export function trackReview(eventId: string): void {
 // ─── Resumen para el dashboard de admin ─────────────────────────────
 
 export async function getAnalyticsSummary(days: number = 7): Promise<SummaryStats> {
-  const token = localStorage.getItem('token');
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const send = async (): Promise<Response> => {
+    const token = getToken();
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return fetch(`${API_URL}/analytics/summary?days=${days}`, {
+      headers,
+      credentials: 'include',
+    });
+  };
 
-  const response = await fetch(`${API_URL}/analytics/summary?days=${days}`, { headers });
+  let response = await send();
+  if (response.status === 401 && (await refreshAccessToken())) {
+    response = await send();
+  }
   if (!response.ok) {
     if (response.status === 403) throw new Error('Solo admins pueden ver estadísticas');
     throw new Error(`HTTP ${response.status}`);

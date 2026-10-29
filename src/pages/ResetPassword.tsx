@@ -9,7 +9,10 @@ import { useAuth } from '@/hooks/useAuth';
 
 export function ResetPassword() {
   const [searchParams] = useSearchParams();
-  const token = searchParams.get('token');
+  // El token viaja en el fragmento para no quedar en logs ni en el Referer.
+  // Se mantiene ?token= como fallback para emails viejos.
+  const hashToken = new URLSearchParams(window.location.hash.replace(/^#/, '')).get('token');
+  const token = searchParams.get('token') || hashToken;
   const { resetPassword } = useAuth();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -27,8 +30,8 @@ export function ResetPassword() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (password.length < 6) {
-      toast.error('La contraseña debe tener al menos 6 caracteres');
+    if (password.length < 8) {
+      toast.error('La contraseña debe tener al menos 8 caracteres');
       return;
     }
     if (password !== confirmPassword) {
@@ -101,7 +104,7 @@ export function ResetPassword() {
               <Input
                 id="new-password"
                 type={showPassword ? 'text' : 'password'}
-                placeholder="Mínimo 6 caracteres"
+                placeholder="Mínimo 8 caracteres"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="pl-10 pr-10"

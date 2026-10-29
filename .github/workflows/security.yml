@@ -1,0 +1,138 @@
+name: security
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (tests + pip-audit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt -r requirements-dev.txt
+      - name: Compilar
+        run: python -m compileall -q app
+      - name: Tests
+        run: pytest
+      - name: Auditoría de dependencias Python
+        run: pip-audit -r requirements.txt
+
+  frontend:
+    name: Frontend (lint + build + npm audit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - name: Instalar dependencias
+        run: npm ci
+      - name: TypeScript
+        run: npm run lint
+      - name: Build
+        run: npm run build
+      - name: Auditoría de dependencias de producción
+        run: npm audit --omit=dev --audit-level=high
+
+  sast:
+    name: SAST (Semgrep)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Instalar Semgrep
+        run: pip install semgrep
+      - name: Escanear Python, TypeScript y React
+        run: |
+          semgrep scan \
+            --config=p/python \
+            --config=p/typescript \
+            --config=p/react \
+            --exclude=node_modules \
+            --exclude=dist \
+            --exclude=exposicion \
+            --exclude=mood-export \
+            --exclude=shalion_prep \
+            --exclude=mongodump \
+            --error \
+            --sarif \
+            --output=semgrep.sarif \
+            .
+      - name: Guardar reporte
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-sarif
+          path: semgrep.sarif
+          if-no-files-found: ignore
+
+  secrets:
+    name: Secretos (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Gitleaks
+        run: |
+          docker run --rm \
+            -v "$PWD:/repo" \
+            zricethezav/gitleaks:v8.28.0 detect \
+            --source=/repo \
+            --config=/repo/.gitleaks.toml \
+            --verbose \
+            --redact
+
+  images:
+    name: Imágenes (Trivy CRITICAL/HIGH)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: backend
+            dockerfile: Dockerfile
+          - name: frontend
+            dockerfile: Dockerfile.frontend
+          - name: nginx
+            dockerfile: Dockerfile.nginx
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build ${{ matrix.name }}
+        run: docker build -t mood-${{ matrix.name }}:ci -f ${{ matrix.dockerfile }} .
+      - name: Trivy ${{ matrix.name }}
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: mood-${{ matrix.name }}:ci
+          format: sarif
+          output: trivy-${{ matrix.name }}.sarif
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
+      - name: Guardar reporte
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-${{ matrix.name }}
+          path: trivy-${{ matrix.name }}.sarif
+          if-no-files-found: ignore

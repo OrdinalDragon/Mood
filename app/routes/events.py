@@ -3,7 +3,7 @@
 # ============================================================
 import math
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Header
+from fastapi import APIRouter, Depends, HTTPException, status, Header, Request
 from app.models import Event, User
 from app.schemas import EventCreate, EventUpdate, EventResponse, EventListResponse
 from app.routes.auth import get_current_user
@@ -21,12 +21,14 @@ from app.notifications_service import (
 from datetime import datetime, timedelta, timezone
 
 
-async def get_current_user_optional(authorization: str = Header(None)):
+async def get_current_user_optional(
+    request: Request, authorization: str = Header(None)
+):
     """Igual que get_current_user pero devuelve None si no hay token."""
     if not authorization:
         return None
     try:
-        return await get_current_user(authorization)
+        return await get_current_user(request, authorization)
     except HTTPException:
         return None
 

@@ -1,10 +1,7 @@
 import { getMood } from './moods';
+import { getToken, refreshAccessToken } from './api';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
-
-function getToken(): string | null {
-  return localStorage.getItem('token');
-}
 
 export async function search_events(args: Record<string, any>): Promise<string> {
   try {
@@ -91,13 +88,21 @@ export async function clear_user_mood(): Promise<string> {
 
 export async function add_to_favorites(args: Record<string, any>): Promise<string> {
   try {
-    const token = getToken();
-    if (!token) return 'Debés iniciar sesión para guardar favoritos';
+    const send = async (): Promise<Response> => {
+      const token = getToken();
+      if (!token) throw new Error('AUTH_REQUIRED');
+      return fetch(`${API_URL}/favorites/${encodeURIComponent(args.event_id)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        credentials: 'include',
+      });
+    };
 
-    const res = await fetch(`${API_URL}/favorites/${encodeURIComponent(args.event_id)}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    });
+    if (!getToken()) return 'Debés iniciar sesión para guardar favoritos';
+    let res = await send();
+    if (res.status === 401 && (await refreshAccessToken())) {
+      res = await send();
+    }
     if (!res.ok) return `Error al agregar a favoritos: ${res.status}`;
     return JSON.stringify({ action: 'add_to_favorites', event_id: args.event_id });
   } catch (err) {

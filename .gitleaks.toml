@@ -1,0 +1,15 @@
+title = "MOOD secret scanning"
+[extend]
+useDefault = true
+
+# Solo se permiten placeholders de ejemplo y el secreto falso de los tests.
+# No agregar allowlists amplias por directorio: ocultarían secretos reales.
+[allowlist]
+description = "Placeholders de documentación y fixture de tests"
+paths = [
+  '''\.env\.example$''',
+  '''PLAN_SEGURIDAD\.md$''',
+]
+regexes = [
+  '''test-only-secret-[A-Za-z0-9_-]+''',
+]

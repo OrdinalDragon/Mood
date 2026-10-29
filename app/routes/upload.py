@@ -8,8 +8,12 @@ from PIL import Image
 
 router = APIRouter(prefix="/upload", tags=["Upload"])
 
-UPLOAD_DIR = "/app/uploads"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+UPLOAD_DIR = os.getenv("UPLOAD_DIR", "/app/uploads")
+try:
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+except OSError:
+    # En CI el path por defecto puede no ser escribible; los tests usan UPLOAD_DIR.
+    pass
 
 # Límite duro para todos los usuarios (incluidos admins).
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB

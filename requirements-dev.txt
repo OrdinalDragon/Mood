@@ -1,0 +1,7 @@
+# Dependencias solo para CI/desarrollo. No se instalan en la imagen de producción.
+-r requirements.txt
+
+pytest>=8.3,<10
+pytest-asyncio>=0.24,<2
+pip-audit>=2.8,<3
+ruff>=0.9,<1

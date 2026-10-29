@@ -6,7 +6,9 @@ const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 export function VerifyEmail() {
   const [searchParams] = useSearchParams();
-  const token = searchParams.get('token');
+  // Preferimos el fragmento (no viaja al servidor ni al Referer).
+  const hashToken = new URLSearchParams(window.location.hash.replace(/^#/, '')).get('token');
+  const token = hashToken || searchParams.get('token');
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('');
 
@@ -19,7 +21,11 @@ export function VerifyEmail() {
 
     const verify = async () => {
       try {
-        const res = await fetch(`${API_URL}/auth/verify-email?token=${encodeURIComponent(token)}`);
+        const res = await fetch(`${API_URL}/auth/verify-email`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token }),
+        });
         const data = await res.json();
         if (res.ok) {
           setStatus('success');

@@ -1,11 +1,30 @@
+import asyncio
+import logging
 import os
+
 import google.generativeai as genai
-from fastapi import APIRouter, HTTPException, status
-from pydantic import BaseModel
-from typing import List, Optional, Any
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from pydantic import BaseModel, Field
+from typing import Any, List, Literal, Optional
 from datetime import datetime
+from starlette.concurrency import run_in_threadpool
+
+from app.audit import log_audit
+from app.models import User
+from app.routes.auth import get_current_user
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/gemini", tags=["Gemini"])
+ALLOWED_FUNCTIONS = {
+    "search_events",
+    "get_event_detail",
+    "get_mood_info",
+    "set_user_mood",
+    "clear_user_mood",
+    "add_to_favorites",
+    "share_event",
+}
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if GEMINI_API_KEY:
@@ -110,18 +129,18 @@ FUNCTION_DECLARATIONS = [
 
 
 class ChatMessage(BaseModel):
-    role: str
-    content: str
-    name: Optional[str] = None
+    role: Literal["user", "model", "function"]
+    content: str = Field(min_length=1, max_length=2000)
+    name: Optional[str] = Field(default=None, max_length=64)
 
 
 class ChatContext(BaseModel):
-    currentMood: Optional[str] = None
-    location: Optional[str] = None
+    currentMood: Optional[str] = Field(default=None, max_length=100)
+    location: Optional[str] = Field(default=None, max_length=200)
 
 
 class ChatRequest(BaseModel):
-    history: List[ChatMessage]
+    history: List[ChatMessage] = Field(min_length=1, max_length=20)
     context: ChatContext
 
 
@@ -141,22 +160,38 @@ class FunctionCallsResponse(BaseModel):
 
 
 @router.post("/chat")
-async def gemini_chat(request: ChatRequest):
+async def gemini_chat(
+    request: ChatRequest,
+    http_request: Request,
+    current_user: User = Depends(get_current_user),
+):
     if not GEMINI_API_KEY:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Gemini API no configurada. Falta GEMINI_API_KEY."
+            detail="Gemini API no configurada. Falta GEMINI_API_KEY.",
         )
 
+    # Validación estricta: solo el modelo puede pedir funciones declaradas.
+    for msg in request.history:
+        if msg.role == "function":
+            if msg.name not in ALLOWED_FUNCTIONS:
+                raise HTTPException(status_code=422, detail="Función no permitida")
+        elif msg.name:
+            raise HTTPException(
+                status_code=422,
+                detail="El campo name solo se permite en mensajes function",
+            )
+
+    started = datetime.utcnow()
     try:
         model = genai.GenerativeModel(
             model_name="gemini-3.5-flash-lite",
             system_instruction=SYSTEM_PROMPT.format(
                 currentMood=request.context.currentMood or "ninguno",
                 location=request.context.location or "no especificada",
-                today=datetime.utcnow().strftime("%Y-%m-%d")
+                today=datetime.utcnow().strftime("%Y-%m-%d"),
             ),
-            tools=[{"function_declarations": FUNCTION_DECLARATIONS}]
+            tools=[{"function_declarations": FUNCTION_DECLARATIONS}],
         )
 
         contents = []
@@ -166,32 +201,82 @@ async def gemini_chat(request: ChatRequest):
             elif msg.role == "model":
                 contents.append({"role": "model", "parts": [{"text": msg.content}]})
             elif msg.role == "function":
-                contents.append({
-                    "role": "user",
-                    "parts": [{"function_response": {"name": msg.name, "response": {"result": msg.content}}}]
-                })
+                contents.append(
+                    {
+                        "role": "user",
+                        "parts": [
+                            {
+                                "function_response": {
+                                    "name": msg.name,
+                                    "response": {"result": msg.content},
+                                }
+                            }
+                        ],
+                    }
+                )
 
-        response = model.generate_content(contents)
+        # La SDK es síncrona: no bloqueamos el event loop y ponemos timeout.
+        response = await asyncio.wait_for(
+            run_in_threadpool(model.generate_content, contents), timeout=30
+        )
 
         function_calls = []
         text_parts = []
         for part in response.candidates[0].content.parts:
             if part.function_call:
                 fc = part.function_call
-                function_calls.append(FunctionCallItem(
-                    name=fc.name,
-                    args=dict(fc.args.items())
-                ))
+                if fc.name not in ALLOWED_FUNCTIONS:
+                    logger.warning("Gemini pidió una función no permitida: %s", fc.name)
+                    continue
+                function_calls.append(
+                    FunctionCallItem(name=fc.name, args=dict(fc.args.items()))
+                )
             elif part.text:
                 text_parts.append(part.text)
+
+        duration_ms = int((datetime.utcnow() - started).total_seconds() * 1000)
+        await log_audit(
+            "gemini_chat",
+            request=http_request,
+            actor_uid=current_user.uid,
+            actor_email=current_user.email,
+            success=True,
+            metadata={"duration_ms": duration_ms, "messages": len(request.history)},
+        )
 
         if function_calls:
             return FunctionCallsResponse(calls=function_calls)
 
         return TextResponse(content="".join(text_parts))
 
-    except Exception as e:
+    except asyncio.TimeoutError:
+        logger.warning("Gemini timeout para uid=%s", current_user.uid)
+        await log_audit(
+            "gemini_chat",
+            request=http_request,
+            actor_uid=current_user.uid,
+            actor_email=current_user.email,
+            success=False,
+            metadata={"reason": "timeout"},
+        )
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error al comunicarse con Gemini: {str(e)}"
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail="El asistente tardó demasiado. Intentá de nuevo.",
+        )
+    except HTTPException:
+        raise
+    except Exception:
+        # Nunca exponer detalles internos del proveedor al cliente.
+        logger.exception("Error en Gemini chat para uid=%s", current_user.uid)
+        await log_audit(
+            "gemini_chat",
+            request=http_request,
+            actor_uid=current_user.uid,
+            actor_email=current_user.email,
+            success=False,
+            metadata={"reason": "upstream"},
+        )
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="No se pudo procesar la consulta. Intentá de nuevo.",
         )

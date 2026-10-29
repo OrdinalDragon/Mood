@@ -5,6 +5,8 @@ from datetime import datetime
 from typing import Optional
 
 from beanie import Document
+from pydantic import Field
+from pymongo import ASCENDING, IndexModel
 
 
 class Event(Document):
@@ -51,13 +53,31 @@ class User(Document):
     google_id: Optional[str] = None
     reset_token: Optional[str] = None
     reset_token_expires_at: Optional[datetime] = None
-    favorites: list = []
+    favorites: list = Field(default_factory=list)
     email_notifications: bool = True
     banned: bool = False
     banned_at: Optional[datetime] = None
+    # Versión de sesión: se incrementa al cambiar/resetear contraseña o banear.
+    # Los access/refresh tokens con una versión vieja dejan de valer.
+    token_version: int = 0
+    last_login_at: Optional[datetime] = None
+    # MFA (TOTP)
+    mfa_enabled: bool = False
+    mfa_secret: Optional[str] = None
+    mfa_pending_secret: Optional[str] = None
+    mfa_recovery_hashes: list[str] = Field(default_factory=list)
 
     class Settings:
         name = "users"
+        indexes = [
+            IndexModel([("uid", ASCENDING)], unique=True),
+            IndexModel([("email", ASCENDING)], unique=True),
+            IndexModel(
+                [("google_id", ASCENDING)],
+                unique=True,
+                partialFilterExpression={"google_id": {"$type": "string"}},
+            ),
+        ]
 
 
 class BannedEmail(Document):
@@ -68,6 +88,7 @@ class BannedEmail(Document):
 
     class Settings:
         name = "banned_emails"
+        indexes = [IndexModel([("email", ASCENDING)], unique=True)]
 
 
 class Ad(Document):
@@ -134,6 +155,58 @@ class Notification(Document):
         name = "notifications"
 
 
+class RefreshSession(Document):
+    """Sesión refrescable. El secreto se guarda hasheado, nunca en claro."""
+
+    session_id: str
+    uid: str
+    secret_hash: str
+    created_at: datetime
+    last_used_at: datetime
+    expires_at: datetime
+    user_agent: Optional[str] = None
+    ip: Optional[str] = None
+    revoked: bool = False
+    # Versión del usuario al crear la sesión: si cambia, la sesión se invalida.
+    token_version: int = 0
+    remember: bool = False
+
+    class Settings:
+        name = "refresh_sessions"
+        indexes = [
+            IndexModel([("session_id", ASCENDING)], unique=True),
+            IndexModel([("uid", ASCENDING)]),
+            # TTL: Mongo borra la sesión al vencer.
+            IndexModel([("expires_at", ASCENDING)], expireAfterSeconds=0),
+        ]
+
+
+class AuditLog(Document):
+    """Evento de auditoría de seguridad. Retención: 180 días."""
+
+    timestamp: datetime
+    action: str
+    actor_uid: Optional[str] = None
+    actor_email: Optional[str] = None
+    target: Optional[str] = None
+    ip: Optional[str] = None
+    user_agent: Optional[str] = None
+    success: bool = True
+    metadata: dict = Field(default_factory=dict)
+
+    class Settings:
+        name = "audit_logs"
+        indexes = [
+            IndexModel([("actor_uid", ASCENDING)]),
+            IndexModel([("action", ASCENDING)]),
+            IndexModel(
+                [("timestamp", ASCENDING)],
+                expireAfterSeconds=180 * 24 * 60 * 60,
+                name="audit_ttl_180d",
+            ),
+        ]
+
+
 class AnalyticsEvent(Document):
     """Evento de telemetría anónimo para estadísticas de uso.
 
@@ -157,4 +230,4 @@ class AnalyticsEvent(Document):
 
 
 # ─── Importar en database.py para que se registre ──────────────────
-from .models import Event, User, BannedEmail, Ad, Review, Notification, AnalyticsEvent
+from .models import Event, User, BannedEmail, Ad, Review, Notification, AnalyticsEvent, RefreshSession, AuditLog

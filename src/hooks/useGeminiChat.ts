@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { FUNCTION_MAP } from '@/lib/gemini-functions';
+import { getToken, refreshAccessToken } from '@/lib/api';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 const STORAGE_KEY = 'gemini_chat_history';
@@ -52,31 +53,51 @@ export function useGeminiChat({ currentMood, location }: UseGeminiChatOptions = 
   }, []);
 
   const sendToBackend = useCallback(async (history: ChatMessage[]): Promise<any> => {
-    const token = localStorage.getItem('token');
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const token = getToken();
+    if (!token) {
+      throw new Error('AUTH_REQUIRED');
+    }
 
-    const res = await fetch(`${API_URL}/gemini/chat`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        history: history.map(m => ({
-          role: m.role,
-          content: m.content,
-          ...(m.name ? { name: m.name } : {}),
-        })),
-        context: {
-          currentMood: currentMood || null,
-          location: location || '',
-        },
-      }),
-    });
+    const send = async (): Promise<Response> => {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      const currentToken = getToken();
+      if (currentToken) headers['Authorization'] = `Bearer ${currentToken}`;
+      return fetch(`${API_URL}/gemini/chat`, {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({
+          history: history.map(m => ({
+            role: m.role,
+            content: m.content,
+            ...(m.name ? { name: m.name } : {}),
+          })),
+          context: {
+            currentMood: currentMood || null,
+            location: location || '',
+          },
+        }),
+      });
+    };
+
+    let res = await send();
+    if (res.status === 401 && (await refreshAccessToken())) {
+      res = await send();
+    }
 
     if (!res.ok) {
-      const err = await res.text();
-      throw new Error(err);
+      if (res.status === 401) throw new Error('AUTH_REQUIRED');
+      if (res.status === 429) throw new Error('Demasiadas consultas. Esperá un momento.');
+      let message = 'No se pudo procesar la consulta';
+      try {
+        const data = await res.json();
+        if (typeof data?.detail === 'string') message = data.detail;
+      } catch {
+        // sin JSON
+      }
+      throw new Error(message);
     }
 
     return res.json();
@@ -210,7 +231,14 @@ export function useGeminiChat({ currentMood, location }: UseGeminiChatOptions = 
 
       addMessage({ role: 'model', content: 'Encontré algunas opciones para vos. ¿Querés que te cuente más sobre alguno?' });
     } catch (err: any) {
-      addMessage({ role: 'model', content: `Error: ${err.message || 'Error de conexión'}` });
+      if (err?.message === 'AUTH_REQUIRED') {
+        addMessage({
+          role: 'model',
+          content: 'Iniciá sesión para usar el asistente de MOOD.',
+        });
+      } else {
+        addMessage({ role: 'model', content: `Error: ${err.message || 'Error de conexión'}` });
+      }
     } finally {
       setIsLoading(false);
     }

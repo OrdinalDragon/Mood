@@ -11,8 +11,15 @@ __pycache__/
 !.env.example
 firebase-applet-config.json
 firebase-blueprint.json
-.github/
+.github/*
+!.github/workflows/
+!.github/workflows/**
+!.github/dependabot.yml
 backend/
+# Plan interno de seguridad (no se versiona)
+PLAN_SEGURIDAD.md
+# Backups locales (nunca al repo)
+backups/
 *.sql
 # src/lib/ is intentionally NOT ignored - contains core source code
 # Material personal - no subir a ningun repositorio

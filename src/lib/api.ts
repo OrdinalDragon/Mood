@@ -8,25 +8,118 @@ import { Event, UserProfile, UserAdmin, Ad, Ban, Notification, Review, UserRatin
 // URL del API desde variables de entorno
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
-// Obtener token del localStorage
-function getToken(): string | null {
-  return localStorage.getItem('token');
+// El access token vive solo en memoria: un XSS no puede leerlo de localStorage.
+// Al recargar la página se recupera con el refresh token HttpOnly.
+let accessToken: string | null = null;
+let refreshPromise: Promise<boolean> | null = null;
+
+// Endpoints que no deben intentar refrescar: o son públicos, o el refresh
+// mismo, o ya manejan el segundo factor. El resto (incluido /auth/me) sí.
+const NO_REFRESH_PATHS = [
+  '/auth/login',
+  '/auth/register',
+  '/auth/google',
+  '/auth/refresh',
+  '/auth/mfa/verify',
+  '/auth/forgot-password',
+  '/auth/reset-password',
+  '/auth/resend-verification',
+  '/auth/verify-email',
+];
+
+function canRefreshAfter401(url: string): boolean {
+  return !NO_REFRESH_PATHS.some((path) => url.startsWith(path));
 }
 
-// Guardar token
+export function getToken(): string | null {
+  return accessToken;
+}
+
 export function setToken(token: string): void {
-  localStorage.setItem('token', token);
+  accessToken = token;
 }
 
-// Eliminar token
 export function removeToken(): void {
-  localStorage.removeItem('token');
+  accessToken = null;
 }
 
-// Fetch con headers de auth
-async function apiFetch<T>(url: string, options: RequestInit = {}): Promise<T> {
+function readCookie(name: string): string | null {
+  const prefix = `${name}=`;
+  const parts = document.cookie ? document.cookie.split('; ') : [];
+  for (const part of parts) {
+    if (part.startsWith(prefix)) {
+      return decodeURIComponent(part.slice(prefix.length));
+    }
+  }
+  return null;
+}
+
+function csrfHeaders(): Record<string, string> {
+  const token = readCookie('mood_csrf');
+  return token ? { 'X-CSRF-Token': token } : {};
+}
+
+async function parseError(response: Response): Promise<string> {
+  try {
+    const data = await response.json();
+    if (data && typeof data.detail === 'string') return data.detail;
+  } catch {
+    // sin JSON: usamos el status
+  }
+  if (response.status === 401) return 'Sesión expirada. Iniciá sesión de nuevo.';
+  if (response.status === 429) return 'Demasiadas solicitudes. Esperá un momento.';
+  return `Error ${response.status}`;
+}
+
+/** Renueva el access token usando la cookie HttpOnly. Singleton para evitar
+ *  varias llamadas concurrentes cuando varias requests reciben 401. */
+async function performRefresh(): Promise<boolean> {
+  try {
+    const response = await fetch(`${API_URL}/auth/refresh`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: csrfHeaders(),
+    });
+    if (!response.ok) {
+      if (response.status === 401) removeToken();
+      return false;
+    }
+    const data = await response.json();
+    if (!data?.access_token) {
+      removeToken();
+      return false;
+    }
+    setToken(data.access_token);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function refreshAccessToken(): Promise<boolean> {
+  if (refreshPromise) return refreshPromise;
+  refreshPromise = (async () => {
+    // La cookie CSRF (legible) indica que puede haber una sesión. Sin ella no
+    // llamamos al endpoint: evita un 403 en consola y ahorra rate limit en
+    // visitas anónimas.
+    const hadSessionHint = Boolean(readCookie('mood_csrf'));
+    if (!hadSessionHint) return false;
+    if (await performRefresh()) return true;
+    // Si otra pestaña rotó el token hace milisegundos, la cookie compartida
+    // ya es la nueva. Un segundo intento evita deslogueos por carrera.
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    return performRefresh();
+  })();
+  try {
+    return await refreshPromise;
+  } finally {
+    refreshPromise = null;
+  }
+}
+
+// Fetch con headers de auth + refresh automático ante 401.
+async function apiFetch<T>(url: string, options: RequestInit = {}, retry = true): Promise<T> {
   const token = getToken();
-  
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -36,10 +129,16 @@ async function apiFetch<T>(url: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(`${API_URL}${url}`, {
     ...options,
     headers,
+    credentials: 'include',
   });
 
+  if (response.status === 401 && retry && canRefreshAfter401(url)) {
+    const refreshed = await refreshAccessToken();
+    if (refreshed) return apiFetch<T>(url, options, false);
+  }
+
   if (!response.ok) {
-    throw new Error(`API Error: ${response.status}`);
+    throw new Error(await parseError(response));
   }
 
   if (response.status === 204) {
@@ -124,20 +223,25 @@ export async function uploadImage(file: File): Promise<{ url: string }> {
   const formData = new FormData();
   formData.append('file', file);
 
-  const token = getToken();
-  const headers: HeadersInit = {};
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+  const send = async (): Promise<Response> => {
+    const token = getToken();
+    const headers: HeadersInit = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return fetch(`${API_URL}/upload/`, {
+      method: 'POST',
+      headers,
+      body: formData,
+      credentials: 'include',
+    });
+  };
+
+  let response = await send();
+  if (response.status === 401 && (await refreshAccessToken())) {
+    response = await send();
   }
 
-  const response = await fetch(`${API_URL}/upload/`, {
-    method: 'POST',
-    headers,
-    body: formData,
-  });
-
   if (!response.ok) {
-    throw new Error(`Upload Error: ${response.status}`);
+    throw new Error(await parseError(response));
   }
 
   return response.json();
@@ -171,10 +275,13 @@ export async function updateProfile(data: { display_name?: string; photo_url?: s
 
 // Cambiar contraseña
 export async function changePassword(current_password: string, new_password: string): Promise<{ message: string }> {
-  return apiFetch<{ message: string }>('/auth/change-password', {
+  const result = await apiFetch<{ message: string }>('/auth/change-password', {
     method: 'POST',
     body: JSON.stringify({ current_password, new_password }),
   });
+  // El backend revoca todas las sesiones al cambiar la contraseña.
+  removeToken();
+  return result;
 }
 
 // Obtener eventos creados por el usuario autenticado
@@ -227,9 +334,19 @@ export async function unbanUser(email: string): Promise<{ message: string }> {
   });
 }
 
-// Logout
+// Logout: revoca la sesión en el servidor y borra las cookies.
 export async function logout(): Promise<void> {
-  removeToken();
+  try {
+    await fetch(`${API_URL}/auth/logout`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: csrfHeaders(),
+    });
+  } catch {
+    // Aunque el servidor no responda, limpiamos el estado local.
+  } finally {
+    removeToken();
+  }
 }
 
 // Listar notificaciones del usuario (máx. 10, no leídas primero)
@@ -348,36 +465,38 @@ export async function deleteReview(reviewId: string): Promise<void> {
   });
 }
 
+export interface AuthResponse {
+  access_token?: string;
+  token_type?: string;
+  mfa_required?: boolean;
+  mfa_token?: string;
+}
+
 // Login
-export async function login(email: string, password: string, rememberMe: boolean = false): Promise<{ access_token: string }> {
+export async function login(email: string, password: string, rememberMe: boolean = false): Promise<AuthResponse> {
   const response = await fetch(`${API_URL}/auth/login`, {
     method: 'POST',
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ email, password, remember_me: rememberMe }),
   });
-  
+
   if (!response.ok) {
-    let errorMessage = `API Error: ${response.status}`;
-    try {
-      const errorData = await response.json();
-      errorMessage = errorData.detail || errorMessage;
-    } catch (e) {
-      // Ignore JSON parse errors
-    }
-    throw new Error(errorMessage);
+    throw new Error(await parseError(response));
   }
-  
-  const data = await response.json();
-  setToken(data.access_token);
+
+  const data: AuthResponse = await response.json();
+  if (data.access_token) setToken(data.access_token);
   return data;
 }
 
 // Google Login
-export async function googleLogin(credential: string): Promise<{ access_token: string }> {
+export async function googleLogin(credential: string): Promise<AuthResponse> {
   const response = await fetch(`${API_URL}/auth/google`, {
     method: 'POST',
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
     },
@@ -385,19 +504,73 @@ export async function googleLogin(credential: string): Promise<{ access_token: s
   });
 
   if (!response.ok) {
-    let errorMessage = `API Error: ${response.status}`;
-    try {
-      const errorData = await response.json();
-      errorMessage = errorData.detail || errorMessage;
-    } catch (e) {
-      // Ignore JSON parse errors
-    }
-    throw new Error(errorMessage);
+    throw new Error(await parseError(response));
   }
 
-  const data = await response.json();
-  setToken(data.access_token);
+  const data: AuthResponse = await response.json();
+  if (data.access_token) setToken(data.access_token);
   return data;
+}
+
+// MFA: verificar código durante el login
+export async function mfaVerify(mfaToken: string, code: string): Promise<AuthResponse> {
+  const response = await fetch(`${API_URL}/auth/mfa/verify`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mfa_token: mfaToken, code }),
+  });
+  if (!response.ok) throw new Error(await parseError(response));
+  const data: AuthResponse = await response.json();
+  if (data.access_token) setToken(data.access_token);
+  return data;
+}
+
+export interface MfaSetupResponse {
+  secret: string;
+  otpauth_url: string;
+  qr_data_uri: string;
+}
+
+export async function mfaSetup(): Promise<MfaSetupResponse> {
+  return apiFetch<MfaSetupResponse>('/auth/mfa/setup', { method: 'POST' });
+}
+
+export async function mfaEnable(code: string, password?: string): Promise<{ message: string; recovery_codes: string[] }> {
+  return apiFetch<{ message: string; recovery_codes: string[] }>('/auth/mfa/enable', {
+    method: 'POST',
+    body: JSON.stringify({ code, password: password || undefined }),
+  });
+}
+
+export async function mfaDisable(password: string, code: string): Promise<{ message: string }> {
+  const result = await apiFetch<{ message: string }>('/auth/mfa/disable', {
+    method: 'POST',
+    body: JSON.stringify({ password, code }),
+  });
+  removeToken();
+  return result;
+}
+
+export interface AuditLogEntry {
+  timestamp: string;
+  action: string;
+  actor_uid: string | null;
+  actor_email: string | null;
+  target: string | null;
+  ip: string | null;
+  user_agent: string | null;
+  success: boolean;
+  metadata: Record<string, unknown>;
+}
+
+export async function getAuditLog(params: { limit?: number; action?: string; actor_uid?: string } = {}): Promise<AuditLogEntry[]> {
+  const qs = new URLSearchParams();
+  if (params.limit) qs.set('limit', String(params.limit));
+  if (params.action) qs.set('action', params.action);
+  if (params.actor_uid) qs.set('actor_uid', params.actor_uid);
+  const suffix = qs.toString() ? `?${qs.toString()}` : '';
+  return apiFetch<AuditLogEntry[]>(`/auth/audit${suffix}`);
 }
 
 // Send verification email

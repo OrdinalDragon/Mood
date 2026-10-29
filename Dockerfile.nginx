@@ -1,0 +1,9 @@
+# ============================================================
+# Dockerfile.nginx - Borde Nginx
+# ============================================================
+# La configuración se monta desde docker-compose.yml para poder editarla
+# sin reconstruir; la imagen solo fija la base y sus actualizaciones.
+
+FROM nginx:1.31.8-alpine
+
+RUN apk upgrade --no-cache

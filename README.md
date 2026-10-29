@@ -112,19 +112,24 @@ docker compose up -d --build
 
 ## Seguridad
 
-Medidas implementadas en la última revisión:
+Medidas implementadas:
 
 - Contraseñas con **bcrypt** (costo 12) y migración transparente de hashes SHA-256 antiguos al iniciar sesión.
 - `JWT_SECRET` obligatorio (sin valor por defecto); el backend no arranca si falta o es inseguro.
-- Tokens de verificación de email (24 h) y de reseteo de contraseña (1 h) con expiración.
+- Sesiones con access token corto en memoria + refresh rotativo en cookie `HttpOnly`/`Secure`/`SameSite=Lax`; revocación por `token_version`.
+- CSRF de doble submit y validación de `Origin`/`Referer`; MFA TOTP con códigos de recuperación de un solo uso para cuentas con contraseña local. Las cuentas creadas solo con Google usan la verificación en dos pasos de Google.
+- Tokens de verificación de email (24 h) y de reseteo de contraseña (1 h) con expiración, almacenados hasheados.
 - Respuestas genéricas en recuperación de contraseña y reenvío de verificación (sin enumeración de usuarios).
-- Rate limiting en Nginx para `/api/auth/` y `/api/`; cabeceras de seguridad y CSP estricta.
+- Auditoría de eventos de seguridad en `audit_logs` (TTL 180 días).
+- Rate limiting en Nginx para `/api/auth/`, `/api/gemini/` y `/api/`; cabeceras de seguridad, CSP con reportes y Trusted Types en modo reporte.
 - Uploads: límite de 10 MB leído en streaming, validación real de formato con Pillow y tope de píxeles.
-- MongoDB, backend y frontend sin puertos publicados al host; solo Nginx expone el puerto 80.
-- Imágenes Docker fijadas a versiones parcheadas (Python 3.12, MongoDB 7.0.45, Nginx 1.31.8, cloudflared 2026.10.5) y backend ejecutado sin privilegios.
+- Nginx publicado solo en `127.0.0.1:80`; el túnel de Cloudflare accede por la red interna. MongoDB, backend y frontend no publican puertos.
+- Backups cifrados de MongoDB con `mongodump` + age/GPG, retención diaria/semanal y runbook de restore.
+- CI con tests, `pip-audit`, `npm audit`, gitleaks, Semgrep y Trivy; Dependabot semanal.
+- Imágenes Docker fijadas a versiones parcheadas (Python 3.12, MongoDB 7.0.45, Nginx 1.31.8, cloudflared 2026.10.5) y backend ejecutado sin privilegios; las imágenes de Nginx actualizan paquetes base en build (`apk upgrade`) y se escanean con Trivy.
 - Swagger/OpenAPI deshabilitados por defecto (`ENABLE_DOCS=0`).
 
-Riesgos residuales conocidos: el token se guarda en `localStorage` (mitigado por CSP, pero un XSS podría robarlo); `google-generativeai` está deprecado (migración a `google-genai` pendiente); el servidor de desarrollo de Vite queda limitado a `127.0.0.1` y conserva un aviso leve de `esbuild` que solo afecta al dev server en Windows.
+Ver [`SECURITY.md`](SECURITY.md) y el [`RUNBOOK`](docs/RUNBOOK.md). Riesgos residuales conocidos: `google-generativeai` está deprecado (migración a `google-genai` pendiente), la CSP conserva `style-src 'unsafe-inline'` e `img-src https:` por compatibilidad, y el túnel de Cloudflare es un punto único de entrada.
 
 ---
 
@@ -266,19 +271,24 @@ docker compose up -d --build
 
 ## Security
 
-Measures implemented in the latest review:
+Implemented measures:
 
 - **bcrypt** password hashing (cost 12) with transparent migration of legacy SHA-256 hashes on login.
 - Mandatory `JWT_SECRET` (no default); the backend refuses to start if it is missing or weak.
-- Expiring email verification (24 h) and password reset (1 h) tokens.
+- Short-lived in-memory access token + rotating refresh token in an `HttpOnly`/`Secure`/`SameSite=Lax` cookie; real revocation via `token_version`.
+- Double-submit CSRF and `Origin`/`Referer` validation; TOTP MFA with single-use recovery codes for accounts with a local password. Accounts created only through Google use Google 2-step verification.
+- Email verification (24 h) and password reset (1 h) tokens with expiry, stored hashed.
 - Generic responses for password recovery and verification resend (no user enumeration).
-- Nginx rate limiting for `/api/auth/` and `/api/`; security headers and a strict CSP.
+- Security audit log in `audit_logs` (180-day TTL).
+- Nginx rate limiting for `/api/auth/`, `/api/gemini/` and `/api/`; security headers, CSP reporting, and report-only Trusted Types.
 - Uploads: 10 MB streaming limit, real Pillow format validation, and a pixel cap.
-- MongoDB, backend and frontend publish no host ports; only Nginx exposes port 80.
-- Docker images pinned to patched versions (Python 3.12, MongoDB 7.0.45, Nginx 1.31.8, cloudflared 2026.10.5) and the backend runs as a non-root user.
+- Nginx published only on `127.0.0.1:80`; Cloudflare Tunnel reaches it over the internal Docker network. MongoDB, backend and frontend publish no host ports.
+- Encrypted MongoDB backups with `mongodump` + age/GPG, daily/weekly retention, and a restore runbook.
+- CI with tests, `pip-audit`, `npm audit`, gitleaks, Semgrep and Trivy; weekly Dependabot.
+- Docker images pinned to patched versions (Python 3.12, MongoDB 7.0.45, Nginx 1.31.8, cloudflared 2026.10.5) and the backend runs as a non-root user; Nginx images apply base-package updates at build time (`apk upgrade`) and are scanned with Trivy.
 - Swagger/OpenAPI disabled by default (`ENABLE_DOCS=0`).
 
-Known residual risks: the token is stored in `localStorage` (mitigated by CSP, but an XSS could steal it); `google-generativeai` is deprecated (migration to `google-genai` pending); the Vite dev server is bound to `127.0.0.1` and keeps one low-severity `esbuild` advisory that only affects the Windows dev server.
+See [`SECURITY.md`](SECURITY.md) and the [`RUNBOOK`](docs/RUNBOOK.md). Known residual risks: `google-generativeai` is deprecated (migration to `google-genai` pending), CSP keeps `style-src 'unsafe-inline'` and `img-src https:` for compatibility, and the Cloudflare Tunnel is a single entry point.
 
 ---
 

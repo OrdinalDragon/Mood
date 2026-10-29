@@ -1,5 +1,6 @@
 import smtplib
 import os
+import ssl
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
@@ -20,15 +21,17 @@ def send_email(to: str, subject: str, body_html: str, body_text: str = ""):
         msg.attach(MIMEText(body_text, "plain"))
     msg.attach(MIMEText(body_html, "html"))
 
-    with smtplib.SMTP(smtp_host, smtp_port) as server:
-        server.starttls()
+    # timeout evita que una caída del SMTP bloquee el worker; el contexto
+    # verifica el certificado del servidor (starttls por defecto no lo hacía).
+    with smtplib.SMTP(smtp_host, smtp_port, timeout=15) as server:
+        server.starttls(context=ssl.create_default_context())
         server.login(smtp_user, smtp_password)
         server.sendmail(smtp_from, to, msg.as_string())
 
 
 def send_verification_email(to: str, token: str):
     frontend_url = os.getenv("FRONTEND_URL", "http://localhost")
-    link = f"{frontend_url}/verify-email?token={token}"
+    link = f"{frontend_url}/verify-email#token={token}"
     body_text = f"Verificá tu cuenta: {link}"
     body_html = f"""\
 <!DOCTYPE html>
@@ -51,7 +54,7 @@ def send_verification_email(to: str, token: str):
 
 def send_reset_password_email(to: str, token: str):
     frontend_url = os.getenv("FRONTEND_URL", "http://localhost")
-    link = f"{frontend_url}/reset-password?token={token}"
+    link = f"{frontend_url}/reset-password#token={token}"
     body_text = f"Restablecé tu contraseña: {link}"
     body_html = f"""\
 <!DOCTYPE html>

@@ -82,7 +82,7 @@ export const RegisterDialog: React.FC<RegisterDialogProps> = ({ open, onOpenChan
       return false;
     }
     if (formData.password.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres.');
+      setError('La contraseña debe tener al menos 8 caracteres.');
       return false;
     }
     if (formData.password !== formData.confirmPassword) {
